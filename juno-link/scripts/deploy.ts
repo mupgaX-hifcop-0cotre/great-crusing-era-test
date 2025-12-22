@@ -1,7 +1,11 @@
-import { ethers } from "hardhat";
+import hre from "hardhat";
+const { ethers } = hre;
 
 async function main() {
     const [deployer] = await ethers.getSigners();
+    if (!deployer) {
+        throw new Error("No deployer account found. Make sure PRIVATE_KEY is set in .env");
+    }
 
     console.log("Deploying contracts with the account:", deployer.address);
 

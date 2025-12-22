@@ -1,13 +1,18 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Anchor } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
-import { useEffect } from "react";
+import { useLanguage } from "@/components/providers/language-provider";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { WaveBackground } from "@/components/ui/wave-background";
+import { Box, Card, CardContent, Typography, Button, Container, Stack } from "@mui/material";
+import AnchorIcon from "@mui/icons-material/Anchor";
+import SailingIcon from "@mui/icons-material/Sailing";
+import LanguageIcon from "@mui/icons-material/Language";
 
 export default function Home() {
-  const { login, loggedIn } = useAuth();
+  const { loggedIn, login, isInitialized, error } = useAuth();
+  const { t, toggleLanguage, language } = useLanguage();
   const router = useRouter();
 
   useEffect(() => {
@@ -17,38 +22,142 @@ export default function Home() {
   }, [loggedIn, router]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4 text-center">
-      <div className="flex flex-col items-center space-y-8 border-4 border-double border-secondary p-12 shadow-xl bg-card rounded-lg max-w-md w-full">
-        <div className="rounded-full bg-secondary/10 p-6">
-          <Anchor className="h-16 w-16 text-primary" />
-        </div>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative",
+        overflow: "hidden",
+        bgcolor: "background.default",
+      }}
+    >
+      <WaveBackground />
 
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tighter text-primary font-serif">
-            JUNO LINK
-          </h1>
-          <p className="text-muted-foreground italic font-serif">
-            Navigate the era of discovery.
-          </p>
-        </div>
+      <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 20 }}>
+        <Button
+          onClick={toggleLanguage}
+          startIcon={<LanguageIcon />}
+          sx={{
+            color: "primary.main",
+            bgcolor: 'rgba(255,255,255,0.8)',
+            '&:hover': { bgcolor: 'rgba(255,255,255,1)' },
+            textTransform: 'none',
+            borderRadius: 2
+          }}
+        >
+          {language === 'ja' ? 'English' : '日本語'}
+        </Button>
+      </Box>
 
-        <div className="w-full pt-8 border-t border-secondary/20">
-          <Button
-            size="lg"
-            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold tracking-wider"
-            onClick={() => login()}
-          >
-            CONNECT WALLET
-          </Button>
-          <p className="text-xs text-muted-foreground mt-4">
-            Connect to the Polygon Amoy Testnet
-          </p>
-        </div>
-      </div>
+      <Container maxWidth="sm" sx={{ position: "relative", zIndex: 10 }}>
+        <Card
+          elevation={3}
+          sx={{
+            borderRadius: 4,
+            overflow: "hidden",
+            maxWidth: 420,
+            transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+            '&:hover': {
+              transform: 'translateY(-4px)',
+            },
+          }}
+        >
+          <CardContent sx={{ p: 6 }}>
+            <Stack spacing={4} alignItems="center">
+              {/* Logo Icon with M3 styling */}
+              <Box
+                sx={{
+                  bgcolor: 'primary.main',
+                  borderRadius: '50%',
+                  p: 3,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0px 4px 8px 3px rgba(0, 0, 0, 0.15)',
+                }}
+              >
+                <SailingIcon sx={{ fontSize: 56, color: 'white' }} />
+              </Box>
 
-      <footer className="absolute bottom-4 text-xs text-muted-foreground">
-        &copy; 2025 Juno Link. All rights reserved.
-      </footer>
-    </main>
+              {/* Title with M3 Typography */}
+              <Typography
+                variant="h3"
+                component="h1"
+                fontWeight={400}
+                color="primary"
+                sx={{
+                  fontSize: '2.5rem',
+                  letterSpacing: '0',
+                  lineHeight: 1.7,
+                }}
+              >
+                {t.login.title}
+              </Typography>
+
+              {/* Subtitle */}
+              <Typography
+                variant="h6"
+                color="text.secondary"
+                sx={{
+                  textAlign: 'center',
+                  fontWeight: 400,
+                  fontSize: '1.25rem',
+                }}
+              >
+                {t.login.subtitle}
+              </Typography>
+
+              {/* Connect Button with M3 styling */}
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={isInitialized ? <AnchorIcon /> : null}
+                onClick={login}
+                disabled={!isInitialized}
+                sx={{
+                  mt: 3,
+                  px: 8,
+                  py: 1.5,
+                  fontSize: '0.95rem',
+                  fontWeight: 500,
+                  borderRadius: '100px',
+                  textTransform: 'none',
+                  boxShadow: '0px 1px 3px 1px rgba(0, 0, 0, 0.15)',
+                  '&:hover': {
+                    boxShadow: '0px 2px 6px 2px rgba(0, 0, 0, 0.15)',
+                    transform: 'translateY(-2px)',
+                  },
+                  transition: 'all 280ms cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              >
+                {isInitialized ? t.login.button : t.common.loading}
+              </Button>
+
+              {error && (
+                <Typography color="error" variant="body2" sx={{ mt: 2, textAlign: 'center' }}>
+                  {error}
+                </Typography>
+              )}
+
+              {/* Footer Text */}
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  mt: 4,
+                  textAlign: 'center',
+                  opacity: 0.8,
+                  fontSize: '0.875rem',
+                }}
+              >
+                {t.login.footer}
+              </Typography>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Container>
+    </Box>
   );
 }

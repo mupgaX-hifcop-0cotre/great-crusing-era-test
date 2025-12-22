@@ -11,6 +11,8 @@ const config: HardhatUserConfig = {
         amoy: {
             url: "https://rpc-amoy.polygon.technology",
             accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+            chainId: 80002,
+            gasPrice: "auto", // or set a specific value e.g., 30000000000 (30 gwei) if auto fails
         },
     },
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { Web3Auth } from "@web3auth/modal";
 import { CHAIN_NAMESPACES, IProvider, WEB3AUTH_NETWORK } from "@web3auth/base";
 import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
@@ -13,6 +13,8 @@ interface AuthContextType {
     logout: () => Promise<void>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     userInfo: any;
+    isInitialized: boolean;
+    error: string | null;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -21,6 +23,8 @@ const AuthContext = createContext<AuthContextType>({
     login: async () => { },
     logout: async () => { },
     userInfo: null,
+    isInitialized: false,
+    error: null,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -37,8 +41,8 @@ const chainConfig = {
     tickerName: "Polygon Ecosystem Token",
 };
 
-// Web3Auth Client ID (Placeholder)
-const clientId = "BPi5PB_Ui1iGkslp82nxaPMLuAgRIqdMH12XS9juW5jMOr9qQbrbpbb8mK5nK_weuD3b04u7J9_u5ffF4c-8j-4"; // Public helper ID or use user provided
+// Web3Auth Client ID
+const clientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID || "";
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [web3auth, setWeb3auth] = useState<Web3Auth | null>(null);
@@ -46,33 +50,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [loggedIn, setLoggedIn] = useState(false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [userInfo, setUserInfo] = useState<any>(null);
+    const [isInitialized, setIsInitialized] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const initRef = useRef(false);
 
     useEffect(() => {
         const init = async () => {
+            if (initRef.current) return;
+            initRef.current = true;
+
             try {
                 const privateKeyProvider = new EthereumPrivateKeyProvider({
                     config: { chainConfig },
                 });
 
-                const web3auth = new Web3Auth({
+                const web3authInstance = new Web3Auth({
                     clientId,
-                    web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_MAINNET,
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    privateKeyProvider: privateKeyProvider as any,
+                    web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
+                    privateKeyProvider,
                 });
 
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                await (web3auth as any).initModal();
-                setWeb3auth(web3auth);
+                // Race between init and timeout
+                await Promise.race([
+                    web3authInstance.initModal(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 10000))
+                ]);
 
-                if (web3auth.connected) {
-                    setProvider(web3auth.provider);
+                setWeb3auth(web3authInstance);
+
+                if (web3authInstance.connected) {
+                    setProvider(web3authInstance.provider);
                     setLoggedIn(true);
-                    const user = await web3auth.getUserInfo();
+                    const user = await web3authInstance.getUserInfo();
                     setUserInfo(user);
                 }
             } catch (error) {
                 console.error("Error initializing Web3Auth:", error);
+                setError(error instanceof Error ? error.message : "Failed to initialize");
+            } finally {
+                setIsInitialized(true);
             }
         };
 
@@ -82,9 +99,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const login = async () => {
         if (!web3auth) {
             console.log("web3auth not initialized yet");
+            setError("Web3Auth not initialized. Please refresh.");
             return;
         }
         try {
+            setError(null);
             const web3authProvider = await web3auth.connect();
             setProvider(web3authProvider);
             setLoggedIn(true);
@@ -92,6 +111,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setUserInfo(user);
         } catch (error) {
             console.error("Error logging in:", error);
+            setError(error instanceof Error ? error.message : "Login failed");
         }
     };
 
@@ -111,7 +131,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ provider, loggedIn, login, logout, userInfo }}>
+        <AuthContext.Provider value={{ provider, loggedIn, login, logout, userInfo, isInitialized, error }}>
             {children}
         </AuthContext.Provider>
     );

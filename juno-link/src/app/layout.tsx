@@ -1,12 +1,21 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond } from "next/font/google";
+import { Noto_Sans_JP, Roboto } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { LanguageProvider } from "@/components/providers/language-provider";
 
-const serif = Cormorant_Garamond({
+const notoSansJP = Noto_Sans_JP({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-serif",
+  weight: ["300", "400", "500", "700"],
+  variable: "--font-noto-sans-jp",
+  display: "swap",
+});
+
+const roboto = Roboto({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "700"],
+  variable: "--font-roboto",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -20,11 +29,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${serif.className} antialiased`}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+    <html lang="ja">
+      <body className={`${notoSansJP.variable} ${roboto.variable} antialiased`}>
+        <LanguageProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </LanguageProvider>
       </body>
     </html>
   );
