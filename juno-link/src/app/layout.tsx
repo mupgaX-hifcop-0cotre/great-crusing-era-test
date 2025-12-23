@@ -1,20 +1,22 @@
 import type { Metadata } from "next";
-import { Noto_Sans_JP, Roboto } from "next/font/google";
+import { Lato, Cinzel } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import ThemeRegistry from "@/components/theme-registry/theme-registry";
 import { LanguageProvider } from "@/components/providers/language-provider";
+import { TutorialProvider } from "@/components/providers/tutorial-provider";
 
-const notoSansJP = Noto_Sans_JP({
+const cinzel = Cinzel({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
-  variable: "--font-noto-sans-jp",
+  weight: ["400", "500", "600", "700", "800", "900"],
+  variable: "--font-cinzel",
   display: "swap",
 });
 
-const roboto = Roboto({
+const lato = Lato({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
-  variable: "--font-roboto",
+  weight: ["100", "300", "400", "700", "900"],
+  variable: "--font-lato",
   display: "swap",
 });
 
@@ -30,11 +32,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className={`${notoSansJP.variable} ${roboto.variable} antialiased`}>
+      <body className={`${cinzel.variable} ${lato.variable} antialiased`}>
         <LanguageProvider>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
+          <ThemeRegistry>
+            <AuthProvider>
+              <TutorialProvider>
+                {children}
+              </TutorialProvider>
+            </AuthProvider>
+          </ThemeRegistry>
         </LanguageProvider>
       </body>
     </html>

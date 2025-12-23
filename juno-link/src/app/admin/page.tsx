@@ -76,6 +76,7 @@ interface Profile {
     wallet_address: string;
     username: string;
     rank: number;
+    avatar_url?: string;
 }
 
 export default function AdminDashboard() {
@@ -158,10 +159,11 @@ export default function AdminDashboard() {
             console.log("Transaction sent:", hash);
 
             if (supabase) {
+                const normalizedTarget = targetAddress.toLowerCase();
                 const { error } = await supabase
-                    .from('profiles')
-                    .update({ rank: 1 })
-                    .eq('wallet_address', targetAddress);
+                    .from('profiles' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+                    .update({ rank: 1 } as unknown as never)
+                    .eq('wallet_address', normalizedTarget);
 
                 if (error) {
                     console.error("Failed to sync rank to DB:", error);
@@ -202,10 +204,11 @@ export default function AdminDashboard() {
             console.log("Transaction sent:", hash);
 
             if (supabase) {
+                const normalizedTarget = targetAddress.toLowerCase();
                 const { error } = await supabase
                     .from('profiles')
-                    .update({ rank: 2 })
-                    .eq('wallet_address', targetAddress);
+                    .update({ rank: 2 } as unknown as never)
+                    .eq('wallet_address', normalizedTarget);
 
                 if (error) {
                     console.error("Failed to sync rank to DB:", error);
@@ -257,10 +260,11 @@ export default function AdminDashboard() {
             }
 
             if (supabase) {
+                const normalizedTarget = targetAddress.toLowerCase();
                 const { error } = await supabase
                     .from('profiles')
-                    .update({ rank: newRank })
-                    .eq('wallet_address', targetAddress);
+                    .update({ rank: newRank } as unknown as never)
+                    .eq('wallet_address', normalizedTarget);
 
                 if (error) {
                     console.error("Failed to sync rank:", error);
@@ -420,6 +424,7 @@ export default function AdminDashboard() {
                                 <Table>
                                     <TableHead>
                                         <TableRow sx={{ bgcolor: "surface.variant" }}>
+                                            <TableCell sx={{ fontWeight: 700, fontSize: "0.80rem", color: "onSurface.variant", textTransform: 'uppercase', letterSpacing: 1 }}>Avatar</TableCell>
                                             <TableCell sx={{ fontWeight: 700, fontSize: "0.80rem", color: "onSurface.variant", textTransform: 'uppercase', letterSpacing: 1 }}>{t.admin.sailorName}</TableCell>
                                             <TableCell sx={{ fontWeight: 700, fontSize: "0.80rem", color: "onSurface.variant", textTransform: 'uppercase', letterSpacing: 1 }}>{t.admin.walletAddress}</TableCell>
                                             <TableCell sx={{ fontWeight: 700, fontSize: "0.80rem", color: "onSurface.variant", textTransform: 'uppercase', letterSpacing: 1 }}>{t.admin.currentRank}</TableCell>
@@ -439,6 +444,39 @@ export default function AdminDashboard() {
                                                     transition: 'background-color 0.2s',
                                                 }}
                                             >
+                                                <TableCell>
+                                                    {profile.avatar_url ? (
+                                                        <Box
+                                                            component="img"
+                                                            src={profile.avatar_url}
+                                                            sx={{
+                                                                width: 40,
+                                                                height: 40,
+                                                                borderRadius: '50%',
+                                                                border: '2px solid',
+                                                                borderColor: profile.rank === 3 ? '#FFD700' : 'outline.variant',
+                                                                bgcolor: 'surface.variant'
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <Box
+                                                            sx={{
+                                                                width: 40,
+                                                                height: 40,
+                                                                borderRadius: '50%',
+                                                                bgcolor: 'surface.variant',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                color: 'text.disabled',
+                                                                fontSize: '0.8rem',
+                                                                border: '1px dashed outline.variant'
+                                                            }}
+                                                        >
+                                                            ?
+                                                        </Box>
+                                                    )}
+                                                </TableCell>
                                                 <TableCell sx={{ fontWeight: 500, fontSize: "1rem" }}>
                                                     {profile.username || "Unknown"}
                                                 </TableCell>

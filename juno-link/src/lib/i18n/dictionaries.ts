@@ -15,10 +15,10 @@ export const ja = {
         crewStatus: '乗組員ステータス',
         identity: '船員情報',
         walletAddress: 'ウォレットアドレス',
-        balance: '$KNOT 残高',
+        balance: '$NM 残高',
         currentRank: '現在のランク',
         adminPanel: '管理画面',
-        guildBoard: 'ギルドボード',
+        guildBoard: 'タスクボード',
         logout: 'ログアウト',
         noTales: 'まだ航海記録はありません',
         google: 'Google',
@@ -27,6 +27,15 @@ export const ja = {
         skills: 'スキル',
         recommendedMissions: '推奨ミッション',
         awakeningCta: '価値を証明して乗組員に参加せよ。',
+        tooltips: {
+            beginVoyage: '無料で航海を始める (Genesis)',
+            reAwaken: 'アーキタイプを再抽選する。コスト: 100 $NM',
+            insufficientBalance: 'このアクションを実行するには$NMが不足しています',
+            copyAddress: 'アドレスをコピー',
+        },
+    },
+    errors: {
+        insufficientNM: '$NM (Nautical Miles) が不足しています。再覚醒には 100 $NM が必要です。',
     },
     ranks: {
         guest: '訪問者',
@@ -69,7 +78,7 @@ export const ja = {
         skills: '保有スキル',
     },
     guild: {
-        title: 'ギルドボード',
+        title: 'タスクボード',
         createTask: '新規任務作成',
         tabs: {
             board: 'ボード',
@@ -120,12 +129,12 @@ export const ja = {
                 reverseAuction: '🔥 リバースオークション発動中',
                 currentLowest: '現在の最低入札額',
                 totalBidders: '入札者数',
-                bidAmount: '入札額 ($KNOT)',
+                bidAmount: '入札額 ($NM)',
                 comment: 'コメント / 提案',
                 placeBid: '入札する',
                 updateBid: '入札を更新',
                 requiredRank: 'ランク1 (甲板員) 以上が必要です。',
-                maxBidError: '入札額が上限を超えています。最大: {limit} $KNOT',
+                maxBidError: '入札額が上限を超えています。最大: {limit} $NM',
             },
             submission: {
                 title: '成果報告 (Submit Work)',
@@ -162,6 +171,71 @@ export const ja = {
         error: 'エラー',
         noTasks: 'タスクなし',
         saving: '保存中...',
+        next: '次へ',
+        finish: '完了',
+    },
+    awakening: {
+        title: '覚醒の儀式',
+        subtitle: 'デジタルオーシャンから魂を呼び覚ます準備はできましたか？\nオラクルがあなたの運命を指し示します。',
+        begin: '儀式を始める',
+        processing: 'オラクルが星々にお伺いを立てています...',
+        complete: '覚醒完了',
+        enterWorld: '大航海時代へ',
+        steps: 'THE ORACLE ({step}/3)',
+        questions: {
+            q1: {
+                text: "嵐の海で船が大きく傾いた時、お前なら真っ先にどこへ走る？",
+                options: {
+                    A: "舵を取る (Lead)",
+                    B: "帆を張り直す (Power)",
+                    C: "仲間を鼓舞する (Charisma)",
+                    D: "海図を確認する (Analyze)"
+                }
+            },
+            q2: {
+                text: "長い航海の夜、甲板で何を思う？",
+                options: {
+                    A: "冒険心 (Adventure)",
+                    B: "安らぎ (Comfort)",
+                    C: "神秘 (Mystery)",
+                    D: "分析 (Tech)"
+                }
+            },
+            q3: {
+                text: "これだけは手放せない、お守りはどれだ？",
+                options: {
+                    A: "コンパス (Guide)",
+                    B: "スカーフ (Voyager)",
+                    C: "楽器 (Bard)",
+                    D: "工具/剣 (Builder)"
+                }
+            }
+        },
+        result: {
+            spiritAnimal: '守護動物',
+            quote: '"{item}, surrounded by {vibe}"', // Note: Placeholder format kept simple
+            error: 'オラクルとの接続が途切れました。もう一度お試しください。',
+            unknownError: '未知の力により儀式が中断されました。'
+        }
+    },
+    tutorial: {
+        welcome: {
+            title: '対話型チュートリアルへようこそ',
+            desc: 'これから実際にタスクボードを使い、任務の作成から完了までの流れを体験していただきます。',
+            button: 'チュートリアルを開始'
+        },
+        steps: {
+            GO_TO_GUILD: 'まずは「タスクボード」へ移動しましょう。メニューまたはダッシュボードからアクセスできます。',
+            CREATE_TASK: '「新規任務作成」ボタンを押して、最初の任務を作成してみましょう。',
+            FILL_FORM: '任務の内容を入力してください。チュートリアル用に自動入力されています。',
+            VOTE: '作成した任務に投票が入るのを待つか、管理者として進行させます。',
+            BID: '任務に船員が立候補するのを待ちます。',
+            REVIEW: '成果物をレビューして、報酬を確定させましょう。',
+            AWAKENING: '100 $NM 貯まりました！さあ、覚醒の儀式へ向かいましょう。'
+        },
+        skip_notice: 'このステップはあなたの権限では実行できないため、自動的にスキップします。',
+        finish_notice: 'おめでとうございます！基本的な流れをマスターしました。',
+        cleanup_notice: '※チュートリアルで作成されたデータは他のユーザーには見えず、後ほど自動的に削除されます。'
     }
 };
 
@@ -181,10 +255,10 @@ export const en = {
         crewStatus: 'Crew Status',
         identity: 'Identity',
         walletAddress: 'Wallet Address',
-        balance: '$KNOT Balance',
+        balance: '$NM Balance',
         currentRank: 'Current Rank',
         adminPanel: 'Admin Panel',
-        guildBoard: 'Guild Board',
+        guildBoard: 'Task Board',
         logout: 'Logout',
         noTales: 'No tales recorded yet',
         google: 'Google',
@@ -193,6 +267,15 @@ export const en = {
         skills: 'Skills',
         recommendedMissions: 'Recommended Missions',
         awakeningCta: 'Prove your worth to join the Crew.',
+        tooltips: {
+            beginVoyage: 'Start your journey for free (Genesis)',
+            reAwaken: 'Re-roll your archetype. Cost: 100 $NM',
+            insufficientBalance: 'Not enough $NM to perform this action',
+            copyAddress: 'Copy Address',
+        },
+    },
+    errors: {
+        insufficientNM: 'Insufficient Nautical Miles ($NM). You need 100 $NM to re-awaken.',
     },
     ranks: {
         guest: 'Guest',
@@ -235,7 +318,7 @@ export const en = {
         skills: 'Skills',
     },
     guild: {
-        title: 'Guild Board',
+        title: 'Task Board',
         createTask: 'Create New Task',
         tabs: {
             board: 'Board',
@@ -286,12 +369,12 @@ export const en = {
                 reverseAuction: '🔥 Reverse Auction Active',
                 currentLowest: 'Current Lowest Bid',
                 totalBidders: 'Total Bidders',
-                bidAmount: 'Bid Amount ($KNOT)',
+                bidAmount: 'Bid Amount ($NM)',
                 comment: 'Comment / Proposal',
                 placeBid: 'Place Bid',
                 updateBid: 'Update Bid',
                 requiredRank: 'Rank 1 (Deckhand) required to bid.',
-                maxBidError: 'Bid exceeds limit. Max: {limit} $KNOT',
+                maxBidError: 'Bid exceeds limit. Max: {limit} $NM',
             },
             submission: {
                 title: 'Work Submission',
@@ -328,6 +411,71 @@ export const en = {
         error: 'Error',
         noTasks: 'No tasks',
         saving: 'Saving...',
+        next: 'Next',
+        finish: 'Finish',
+    },
+    awakening: {
+        title: 'The Genesis Ritual',
+        subtitle: 'Are you ready to awaken your soul from the digital ocean?\nThe Oracle awaits to chart your destiny.',
+        begin: 'Begin Ritual',
+        processing: 'The Oracle is consulting the stars...',
+        complete: 'AWAKENING COMPLETE',
+        enterWorld: 'Enter The Great Cruising Era',
+        steps: 'THE ORACLE ({step}/3)',
+        questions: {
+            q1: {
+                text: "When the ship lists heavily in a storm, where do you run first?",
+                options: {
+                    A: "Take the Helm (Lead)",
+                    B: "Trim the Sails (Power)",
+                    C: "Rally the Crew (Charisma)",
+                    D: "Check the Charts (Analyze)"
+                }
+            },
+            q2: {
+                text: "On a long night watch, what occupies your thoughts?",
+                options: {
+                    A: "Adventure",
+                    B: "Comfort",
+                    C: "Mystery",
+                    D: "Technology/Analysis"
+                }
+            },
+            q3: {
+                text: "Which charm can you absolutely not part with?",
+                options: {
+                    A: "Compass (Guide)",
+                    B: "Scarf (Voyager)",
+                    C: "Instrument (Bard)",
+                    D: "Tools/Sword (Builder)"
+                }
+            }
+        },
+        result: {
+            spiritAnimal: 'Spirit Animal',
+            quote: '"{item}, surrounded by {vibe}"',
+            error: 'The connection to the Oracle was severed. Please try again.',
+            unknownError: 'The ritual was disrupted by an unknown force.'
+        }
+    },
+    tutorial: {
+        welcome: {
+            title: 'Welcome to the Interactive Tutorial',
+            desc: "You'll now experience the full workflow from creating a task to completing it on the Task Board.",
+            button: 'Start Tutorial'
+        },
+        steps: {
+            GO_TO_GUILD: 'First, let\'s head to the "Task Board". You can access it via the menu or dashboard.',
+            CREATE_TASK: 'Click the "Create New Task" button to start your first mission.',
+            FILL_FORM: 'Fill in the task details. We\'ve pre-filled some info for the tutorial.',
+            VOTE: 'Wait for votes on your task, or proceed as an admin.',
+            BID: 'Wait for crew members to bid on your mission.',
+            REVIEW: 'Review the deliverables and finalize the rewards.',
+            AWAKENING: 'You\'ve saved up 100 $NM! Time to head to the Awakening Ritual.'
+        },
+        skip_notice: 'This step is restricted for your role, so we will skip it automatically.',
+        finish_notice: 'Congratulations! You have mastered the basics.',
+        cleanup_notice: '*Tutorial tasks are private to you and will be automatically deleted later.'
     }
 };
 

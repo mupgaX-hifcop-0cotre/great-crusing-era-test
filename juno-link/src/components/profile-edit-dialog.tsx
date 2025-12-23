@@ -71,14 +71,14 @@ export function ProfileEditDialog({ walletAddress, currentUsername, currentBio, 
 
         try {
             const { error } = await supabase
-                .from('profiles')
+                .from('profiles' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
                 .update({
                     username,
                     bio,
                     skills,
                     updated_at: new Date().toISOString()
-                })
-                .eq('wallet_address', walletAddress);
+                } as unknown as never)
+                .eq('wallet_address', walletAddress.toLowerCase());
 
             if (error) {
                 console.error("Error updating profile:", error);

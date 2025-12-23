@@ -73,8 +73,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
                 // Race between init and timeout
                 await Promise.race([
-                    web3authInstance.initModal(),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 10000))
+                    web3authInstance.initModal().catch(e => {
+                        console.error("Web3Auth initModal error:", e);
+                        throw e;
+                    }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error("Web3Auth Initialization Timeout (10s)")), 10000))
                 ]);
 
                 setWeb3auth(web3authInstance);
@@ -87,7 +90,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 }
             } catch (error) {
                 console.error("Error initializing Web3Auth:", error);
-                setError(error instanceof Error ? error.message : "Failed to initialize");
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                setError(errorMessage);
             } finally {
                 setIsInitialized(true);
             }
@@ -109,6 +113,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setLoggedIn(true);
             const user = await web3auth.getUserInfo();
             setUserInfo(user);
+
+            // Sync user to Supabase Profiles
+            if (user && web3authProvider) {
+                // Get address
+                const accounts = (await web3authProvider.request({ method: "eth_accounts" })) as string[];
+                const address = accounts?.[0];
+
+                if (address) {
+                    const normalizedAddress = address.toLowerCase();
+                    const { createClient } = await import("@supabase/supabase-js");
+                    const supabase = createClient(
+                        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+                    );
+
+                    // Allow updating email if present
+                    const updates: Record<string, unknown> = {
+                        wallet_address: normalizedAddress,
+                        updated_at: new Date().toISOString(),
+                    };
+
+                    if (user.email) {
+                        updates.email = user.email;
+                    }
+                    if (user.name) {
+                        updates.username = user.name;
+                    }
+
+                    // We use upsert to create or update. 
+                    // Note: This relies on RLS allowing update/insert for the user's wallet address.
+                    // The 'supabase_rls_guest_fix.sql' or similar policies must allow this.
+                    const { error: upsertError } = await supabase
+                        .from('profiles')
+                        .upsert(updates, { onConflict: 'wallet_address' });
+
+                    if (upsertError) {
+                        console.error("Error syncing profile:", upsertError);
+                    }
+                }
+            }
         } catch (error) {
             console.error("Error logging in:", error);
             setError(error instanceof Error ? error.message : "Login failed");
