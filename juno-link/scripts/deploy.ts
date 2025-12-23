@@ -1,5 +1,7 @@
+/// <reference types="@nomicfoundation/hardhat-toolbox" />
 import hre from "hardhat";
-const { ethers } = hre;
+
+const { ethers } = hre as any;
 
 async function main() {
     const [deployer] = await ethers.getSigners();

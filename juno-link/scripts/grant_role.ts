@@ -1,6 +1,7 @@
+/// <reference types="@nomicfoundation/hardhat-toolbox" />
 import hre from "hardhat";
 
-const { ethers } = hre;
+const { ethers } = hre as any; // Cast as any to satisfy IDE if augmentation is failing
 
 async function main() {
     const TARGET_ADDRESS = process.env.TARGET_ADDRESS; // User's Web3Auth Address

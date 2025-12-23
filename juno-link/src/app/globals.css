@@ -4,108 +4,104 @@
 
 @import "../styles/ritual.css";
 
-/* Material Design Global Styles */
-
+/* Golden Voyage Global Styles */
 :root {
-  /* Material Design Color Palette */
-  --primary: #0277BD;
-  --primary-light: #58A5F0;
-  --primary-dark: #004C8C;
-
-  --secondary: #00BFA5;
-  --secondary-light: #5DF2D6;
-  --secondary-dark: #008E76;
-
-  --background: #FAFAFA;
-  --surface: #FFFFFF;
-
-  --text-primary: #212121;
-  --text-secondary: #757575;
-
-  --error: #D32F2F;
-  --success: #388E3C;
-  --warning: #F57C00;
-  --info: #0288D1;
-
-  /* Rank Colors */
-  --rank-guest: #9E9E9E;
-  --rank-deckhand: #2196F3;
-  --rank-skipper: #FFC107;
-
-  /* Shadows */
-  --shadow-sm: 0px 2px 4px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0px 4px 8px rgba(0, 0, 0, 0.12);
-  --shadow-lg: 0px 8px 16px rgba(0, 0, 0, 0.16);
+  --primary-gold: #D4AF37;
+  --primary-gold-dim: #917926;
+  --ocean-deep: #051E3E;
+  --ocean-dark: #020C1B;
 }
 
 body {
-  font-family: var(--font-noto-sans-jp), var(--font-roboto), sans-serif;
-  color: var(--text-primary);
-  background-color: var(--background);
-  line-height: 1.7;
-  /* Japanese optimization */
-  letter-spacing: 0.05em;
+  font-family: var(--font-lato), sans-serif;
+  color: #E0E6ED;
+  background: radial-gradient(circle at 50% 0%, #0F2D54 0%, #051E3E 40%, #020C1B 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
 }
 
+/* Headings use Cinzel */
 h1,
 h2,
 h3,
 h4,
 h5,
 h6 {
-  font-family: var(--font-noto-sans-jp), var(--font-roboto), sans-serif;
-  line-height: 1.7;
-  font-weight: 500;
+  font-family: var(--font-cinzel), serif;
+  font-weight: 600;
+  letter-spacing: 0.05em;
 }
 
-/* Remove Tailwind's default focus styles and use Material ripple */
-button:focus-visible,
-a:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-  border-radius: 4px;
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: rgba(13, 25, 41, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
 
-/* Material elevation classes */
-.elevation-0 {
-  box-shadow: none;
+.glass-panel-light {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.elevation-1 {
-  box-shadow: 0px 2px 1px -1px rgba(0, 0, 0, 0.2), 0px 1px 1px 0px rgba(0, 0, 0, 0.14), 0px 1px 3px 0px rgba(0, 0, 0, 0.12);
-}
-
-.elevation-2 {
-  box-shadow: 0px 3px 1px -2px rgba(0, 0, 0, 0.2), 0px 2px 2px 0px rgba(0, 0, 0, 0.14), 0px 1px 5px 0px rgba(0, 0, 0, 0.12);
-}
-
-.elevation-4 {
-  box-shadow: 0px 2px 4px -1px rgba(0, 0, 0, 0.2), 0px 4px 5px 0px rgba(0, 0, 0, 0.14), 0px 1px 10px 0px rgba(0, 0, 0, 0.12);
-}
-
-.elevation-8 {
-  box-shadow: 0px 5px 5px -3px rgba(0, 0, 0, 0.2), 0px 8px 10px 1px rgba(0, 0, 0, 0.14), 0px 3px 14px 2px rgba(0, 0, 0, 0.12);
-}
-
-/* Smooth transitions */
-* {
-  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Custom scrollbar (Material style) */
+/* Scrollbar Polish */
 ::-webkit-scrollbar {
-  width: 12px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--background);
+  background: #020C1B;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--text-secondary);
-  border-radius: 6px;
+  background: #1e3a8a;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-primary);
+  background: #D4AF37;
+}
+
+/* Animated Starfield (Subtle) */
+@keyframes twinkle {
+
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.star {
+  position: absolute;
+  background: white;
+  border-radius: 50%;
+  animation: twinkle 3s infinite ease-in-out;
+}
+
+/* Wave Animations */
+@keyframes wave-motion {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-wave-slow {
+  animation: wave-motion 25s linear infinite;
+}
+
+.animate-wave-medium {
+  animation: wave-motion 15s linear infinite;
 }

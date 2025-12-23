@@ -1,0 +1,29 @@
+
+> juno-link@0.1.0 build
+> next build
+
+  ▲ Next.js 14.2.35
+  - Environments: .env
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+
+Failed to compile.
+
+./src/components/onboarding/onboarding-overlay.tsx
+9:5  Error: 'CircularProgress' is defined but never used.  @typescript-eslint/no-unused-vars
+11:5  Error: 'Paper' is defined but never used.  @typescript-eslint/no-unused-vars
+14:18  Error: 'AnimatePresence' is defined but never used.  @typescript-eslint/no-unused-vars
+17:14  Error: 'CheckIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+18:16  Error: 'SailingIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+19:20  Error: 'MagicIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+20:23  Error: 'WalletIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+37:28  Error: 'nextStep' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+38:12  Error: 'isClaiming' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+61:35  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+61:70  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+78:11  Error: 'handleClaimReward' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+258:10  Error: 'LinearProgressWithLabel' is defined but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules

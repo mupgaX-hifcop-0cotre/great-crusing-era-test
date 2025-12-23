@@ -8,7 +8,10 @@ export interface Profile {
     rank: number;
     updated_at: string;
     skills: string[] | null;
-    knot_balance: number;
+    nm_balance: number;
+    email?: string | null;
+    archetype?: string | null;
+    avatar_metadata?: Record<string, unknown>;
 }
 
 export interface Task {
@@ -37,6 +40,7 @@ export interface Notification {
     message: string | null;
     is_read: boolean;
     link: string | null;
+    type: 'info' | 'success' | 'warning' | 'error';
     created_at: string;
 }
 
@@ -70,6 +74,12 @@ export interface TaskReview {
     };
 }
 
+export interface TaskFavorite {
+    task_id: string; // FK to tasks.id
+    user_id: string; // FK to profiles.wallet_address
+    created_at: string;
+}
+
 export interface Database {
     public: {
         Tables: {
@@ -95,13 +105,18 @@ export interface Database {
             };
             notifications: {
                 Row: Notification;
-                Insert: Omit<Notification, 'id' | 'created_at'>;
+                Insert: Omit<Notification, 'id' | 'created_at' | 'type'> & { type?: 'info' | 'success' | 'warning' | 'error' };
                 Update: Partial<Omit<Notification, 'id' | 'created_at'>>;
             };
             task_reviews: {
                 Row: TaskReview;
                 Insert: Omit<TaskReview, 'id' | 'created_at' | 'profiles'>;
                 Update: Partial<Omit<TaskReview, 'id' | 'created_at' | 'profiles'>>;
+            };
+            task_favorites: {
+                Row: TaskFavorite;
+                Insert: Omit<TaskFavorite, 'created_at'>;
+                Update: Partial<Omit<TaskFavorite, 'created_at'>>;
             };
         };
     };

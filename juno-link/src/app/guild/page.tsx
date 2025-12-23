@@ -35,6 +35,7 @@ import { NotificationCenter } from "@/components/ui/notification-center";
 import { ArchivedTasks } from "@/components/guild/archived-tasks";
 import { Tabs, Tab } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTutorial } from "@/components/providers/tutorial-provider";
 
 // Admin address for visibility check
 const ADMIN_ADDRESS = "0x264C351Ace86F18D620a12007A959AEcC02F7DDe";
@@ -42,6 +43,7 @@ const ADMIN_ADDRESS = "0x264C351Ace86F18D620a12007A959AEcC02F7DDe";
 export default function GuildBoardPage() {
     const { loggedIn, provider, logout } = useAuth();
     const { t, toggleLanguage, language } = useLanguage();
+    const { step } = useTutorial();
     const router = useRouter();
     const [address, setAddress] = useState<string>("");
     const [loading, setLoading] = useState(true);
@@ -94,7 +96,8 @@ export default function GuildBoardPage() {
                     transport: custom(provider),
                 });
                 const [addr] = await walletClient.requestAddresses();
-                setAddress(addr);
+                const normalizedAddr = addr.toLowerCase();
+                setAddress(normalizedAddr);
             } catch (err) {
                 console.error("Error fetching address:", err);
             } finally {
@@ -124,6 +127,8 @@ export default function GuildBoardPage() {
     }
 
     const isAdmin = address.toLowerCase() === ADMIN_ADDRESS.toLowerCase();
+    const showCreateButton = isAdmin || step === 'CREATE_TASK';
+    const highlightCreate = step === 'CREATE_TASK';
 
     return (
         <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
@@ -195,15 +200,27 @@ export default function GuildBoardPage() {
                             </Typography>
                         </Stack>
 
-                        {isAdmin && (
-                            <Button
-                                variant="contained"
-                                startIcon={<AddIcon />}
-                                onClick={() => setIsCreateOpen(true)}
-                                sx={{ borderRadius: 2 }}
+                        {showCreateButton && (
+                            <motion.div
+                                animate={highlightCreate ? { scale: [1, 1.05, 1], boxShadow: ["0 0 0px #D4AF37", "0 0 20px #D4AF37", "0 0 0px #D4AF37"] } : {}}
+                                transition={highlightCreate ? { repeat: Infinity, duration: 2 } : {}}
                             >
-                                {t.guild.createTask}
-                            </Button>
+                                <Button
+                                    variant="contained"
+                                    startIcon={<AddIcon />}
+                                    onClick={() => setIsCreateOpen(true)}
+                                    sx={{
+                                        borderRadius: 2,
+                                        bgcolor: highlightCreate ? '#D4AF37' : 'primary.main',
+                                        color: highlightCreate ? '#000' : '#fff',
+                                        '&:hover': {
+                                            bgcolor: highlightCreate ? '#F9A825' : 'primary.dark',
+                                        }
+                                    }}
+                                >
+                                    {t.guild.createTask}
+                                </Button>
+                            </motion.div>
                         )}
                     </Stack>
                 </Container>

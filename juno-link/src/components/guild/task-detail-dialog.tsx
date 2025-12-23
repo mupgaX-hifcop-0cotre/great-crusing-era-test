@@ -15,11 +15,17 @@ import {
     Rating,
     Alert,
     Paper,
+    IconButton,
 } from "@mui/material";
+import {
+    Star as StarIcon,
+    StarBorder as StarBorderIcon,
+} from "@mui/icons-material";
 import { Task, TaskReview, TaskBid } from "@/types";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/components/providers/language-provider";
+import { useTutorial } from "@/components/providers/tutorial-provider";
 
 interface TaskDetailDialogProps {
     open: boolean;
@@ -34,6 +40,7 @@ const FIBONACCI_POINTS = [1, 2, 3, 5, 8, 13, 21];
 
 export function TaskDetailDialog({ open, onClose, task, currentUserAddress, currentUserRank = 0, onUpdated }: TaskDetailDialogProps) {
     const { t, language } = useLanguage();
+    const { step, nextStep } = useTutorial();
     const [votePoints, setVotePoints] = useState<number | null>(null);
     const [bidAmount, setBidAmount] = useState<string>("");
     const [bidComment, setBidComment] = useState<string>("");
@@ -44,19 +51,21 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [timeLeft, setTimeLeft] = useState<string>("");
     const [creatorName, setCreatorName] = useState<string>("");
+    const [assigneeName, setAssigneeName] = useState<string>("");
     const [reportComment, setReportComment] = useState("");
     const [reportLink, setReportLink] = useState("");
     const [evalRating, setEvalRating] = useState<number>(5);
     const [evalComment, setEvalComment] = useState("");
     const [reviews, setReviews] = useState<TaskReview[]>([]);
     const [hasReviewed, setHasReviewed] = useState(false);
+    const [isFavorited, setIsFavorited] = useState(false);
 
     const fetchBidStats = useCallback(async () => {
         if (!task || !supabase) return;
 
         // Fetch stats for all
         const { data: statsData } = await supabase
-            .from('task_bids')
+            .from('task_bids' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
             .select('bid_amount')
             .eq('task_id', task.id);
 
@@ -68,9 +77,10 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
         }
 
         // Fetch full list for admins/creator if in bidding/assigned stage
-        if (currentUserRank >= 100 || currentUserAddress === task.creator_id) {
+        const isCreator = currentUserAddress?.toLowerCase() === task.creator_id?.toLowerCase();
+        if (currentUserRank >= 100 || isCreator) {
             const { data: fullBids } = await supabase
-                .from('task_bids')
+                .from('task_bids' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
                 .select('*, profiles(username)')
                 .eq('task_id', task.id)
                 .order('bid_amount', { ascending: true });
@@ -83,16 +93,33 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
         const fetchCreator = async () => {
             if (!task?.creator_id || !supabase) return;
             const { data } = await supabase
-                .from('profiles')
+                .from('profiles' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
                 .select('username')
-                .eq('wallet_address', task.creator_id)
-                .single();
-            if (data?.username) {
-                setCreatorName(data.username);
+                .eq('wallet_address', task.creator_id.toLowerCase())
+                .maybeSingle();
+            if ((data as any)?.username) { // eslint-disable-line @typescript-eslint/no-explicit-any
+                setCreatorName((data as any).username); // eslint-disable-line @typescript-eslint/no-explicit-any
             }
         };
         fetchCreator();
     }, [task?.creator_id]);
+
+    useEffect(() => {
+        const fetchAssignee = async () => {
+            if (!task?.assignee_id || !supabase) return;
+            const { data } = await supabase
+                .from('profiles' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+                .select('username')
+                .eq('wallet_address', task.assignee_id.toLowerCase())
+                .maybeSingle();
+            if ((data as any)?.username) { // eslint-disable-line @typescript-eslint/no-explicit-any
+                setAssigneeName((data as any).username); // eslint-disable-line @typescript-eslint/no-explicit-any
+            } else {
+                setAssigneeName("");
+            }
+        };
+        fetchAssignee();
+    }, [task?.assignee_id]);
 
     useEffect(() => {
         if (!open || !task) return;
@@ -125,48 +152,85 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
     const fetchReviews = useCallback(async () => {
         if (!task || !supabase) return;
         const { data } = await supabase
-            .from('task_reviews')
+            .from('task_reviews' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
             .select('*, profiles(username)')
             .eq('task_id', task.id)
             .order('created_at', { ascending: false });
         if (data) {
             setReviews(data as TaskReview[]);
             if (currentUserAddress) {
-                setHasReviewed(data.some((e: TaskReview) => e.reviewer_id === currentUserAddress));
+                const normalizedUser = currentUserAddress.toLowerCase();
+                setHasReviewed(data.some((e: TaskReview) => e.reviewer_id?.toLowerCase() === normalizedUser));
             }
         }
     }, [task, currentUserAddress]);
+
+    const checkFavoriteStatus = useCallback(async () => {
+        if (!task || !currentUserAddress || !supabase) return;
+        const { data } = await supabase
+            .from('task_favorites' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+            .select('*')
+            .eq('task_id', task.id)
+            .eq('user_id', currentUserAddress.toLowerCase())
+            .maybeSingle();
+        setIsFavorited(!!data);
+    }, [task, currentUserAddress]);
+
+    const handleToggleFavorite = async () => {
+        if (!task || !currentUserAddress || !supabase) return;
+        const normalizedAddress = currentUserAddress.toLowerCase();
+
+        try {
+            if (isFavorited) {
+                await supabase
+                    .from('task_favorites' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+                    .delete()
+                    .eq('task_id', task.id)
+                    .eq('user_id', normalizedAddress);
+            } else {
+                await supabase
+                    .from('task_favorites' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+                    .insert({
+                        task_id: task.id,
+                        user_id: normalizedAddress
+                    } as unknown as never);
+            }
+            setIsFavorited(!isFavorited);
+        } catch (e) {
+            console.error("Toggle favorite error:", e);
+        }
+    };
 
     const checkUserStatus = useCallback(async () => {
         if (!task || !currentUserAddress || !supabase) return;
 
         if (task.status === 'voting') {
             const { data } = await supabase
-                .from('task_votes')
+                .from('task_votes' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
                 .select('points')
                 .eq('task_id', task.id)
-                .eq('user_id', currentUserAddress)
+                .eq('user_id', currentUserAddress.toLowerCase())
                 .maybeSingle();
 
             if (data) {
                 setHasVoted(true);
-                setVotePoints(data.points);
+                setVotePoints((data as any).points); // eslint-disable-line @typescript-eslint/no-explicit-any
             } else {
                 setHasVoted(false);
                 setVotePoints(null);
             }
         } else if (task.status === 'bidding') {
             const { data } = await supabase
-                .from('task_bids')
+                .from('task_bids' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
                 .select('*')
                 .eq('task_id', task.id)
-                .eq('user_id', currentUserAddress)
+                .eq('user_id', currentUserAddress.toLowerCase())
                 .maybeSingle();
 
             if (data) {
                 setHasBidded(true);
-                setBidAmount(data.bid_amount.toString());
-                setBidComment(data.comment || "");
+                setBidAmount((data as any).bid_amount.toString()); // eslint-disable-line @typescript-eslint/no-explicit-any
+                setBidComment((data as any).comment || ""); // eslint-disable-line @typescript-eslint/no-explicit-any
             } else {
                 setHasBidded(false);
                 setBidAmount("");
@@ -175,28 +239,40 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
         }
     }, [task, currentUserAddress]);
 
+    useEffect(() => {
+        if (open && task && currentUserAddress) {
+            checkUserStatus();
+            fetchBidStats();
+            checkFavoriteStatus();
+            if (task.status === 'review' || task.status === 'done') {
+                fetchReviews();
+            }
+        }
+    }, [open, task, currentUserAddress, checkUserStatus, fetchBidStats, fetchReviews, checkFavoriteStatus]);
+
     const handleAssign = async (bidderAddress: string) => {
         if (!task || !supabase) return;
         setIsSubmitting(true);
         try {
+            const normalizedBidder = bidderAddress.toLowerCase();
             const { error: updateError } = await supabase
-                .from('tasks')
+                .from('tasks' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
                 .update({
-                    assignee_id: bidderAddress,
+                    assignee_id: normalizedBidder,
                     status: 'assigned'
-                })
+                } as unknown as never)
                 .eq('id', task.id);
 
             if (updateError) throw updateError;
 
             // Notification for assignee
-            await supabase.from('notifications').insert({
-                user_id: bidderAddress,
+            await supabase.from('notifications' as any).insert({ // eslint-disable-line @typescript-eslint/no-explicit-any
+                user_id: normalizedBidder,
                 title: 'Mission Assigned!',
                 message: `You have been assigned to: ${task.title}. Good luck, sailor!`,
                 is_read: false,
                 link: '/guild'
-            });
+            } as unknown as never);
 
             if (onUpdated) onUpdated();
             onClose();
@@ -208,26 +284,17 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
         }
     };
 
-    useEffect(() => {
-        if (open && task && currentUserAddress) {
-            checkUserStatus();
-            fetchBidStats();
-            if (task.status === 'review' || task.status === 'done') {
-                fetchReviews();
-            }
-        }
-    }, [open, task, currentUserAddress, checkUserStatus, fetchBidStats, fetchReviews]);
-
     const handleVote = async (points: number) => {
         if (!task || !currentUserAddress || !supabase) return;
         setIsSubmitting(true);
         try {
-            await supabase.from('task_votes').upsert({
+            const normalizedUser = currentUserAddress.toLowerCase();
+            await supabase.from('task_votes' as any).upsert({ // eslint-disable-line @typescript-eslint/no-explicit-any
                 task_id: task.id,
-                user_id: currentUserAddress,
+                user_id: normalizedUser,
                 points,
                 created_at: new Date().toISOString()
-            });
+            } as unknown as never);
             setVotePoints(points);
             setHasVoted(true);
         } catch (e) {
@@ -252,54 +319,105 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
 
                 // Calculate Consensus Story Points (Median of Fibonacci votes)
                 const { data: voteData } = await supabase
-                    .from('task_votes')
+                    .from('task_votes' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
                     .select('points')
                     .eq('task_id', task.id);
 
                 if (voteData && voteData.length > 0) {
-                    const sortedPoints = voteData.map((v: { points: number }) => v.points).sort((a: number, b: number) => a - b);
+                    const sortedPoints = (voteData as any[]).map((v: { points: number }) => v.points).sort((a: number, b: number) => a - b); // eslint-disable-line @typescript-eslint/no-explicit-any
                     const mid = Math.floor(sortedPoints.length / 2);
                     const median = sortedPoints.length % 2 !== 0
                         ? sortedPoints[mid]
                         : Math.round((sortedPoints[mid - 1] + sortedPoints[mid]) / 2);
 
                     updates.story_points = median;
+
+                    // Incentives: Oracle Bonus (10 NM for closest voters)
+                    const closestDiff = Math.min(...(voteData as any[]).map((v: { points: number }) => Math.abs(v.points - median))); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+                    const { data: eligibleVoters } = await supabase
+                        .from('task_votes' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+                        .select('user_id, points')
+                        .eq('task_id', task.id);
+
+                    if (eligibleVoters) {
+                        const payoutPromises = (eligibleVoters as any[]) // eslint-disable-line @typescript-eslint/no-explicit-any
+                            .filter((v: { points: number }) => Math.abs(v.points - median) === closestDiff)
+                            .map(async (v: { user_id: string }) => {
+                                // Credit 10 NM
+                                if (!supabase) return;
+                                const normalizedVoter = v.user_id.toLowerCase();
+                                const { data: p } = await supabase.from('profiles' as any).select('nm_balance').eq('wallet_address', normalizedVoter).single(); // eslint-disable-line @typescript-eslint/no-explicit-any
+                                if (p) {
+                                    await supabase.from('profiles' as any).update({ nm_balance: ((p as any).nm_balance || 0) + 10 } as unknown as never).eq('wallet_address', normalizedVoter); // eslint-disable-line @typescript-eslint/no-explicit-any
+                                    // Notification
+                                    await supabase.from('notifications' as any).insert({ // eslint-disable-line @typescript-eslint/no-explicit-any
+                                        user_id: normalizedVoter,
+                                        title: 'Oracle Bonus!',
+                                        message: `You earned 10 $NM for accurate estimation on "${task.title}".`,
+                                        is_read: false,
+                                        link: '/guild'
+                                    } as unknown as never);
+                                }
+                            });
+                        await Promise.all(payoutPromises);
+                    }
                 }
             } else if (task.status === 'bidding') {
                 nextStatus = 'assigned';
                 const { data: bids } = await supabase
-                    .from('task_bids')
+                    .from('task_bids' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
                     .select('user_id')
                     .eq('task_id', task.id)
                     .order('bid_amount', { ascending: true })
                     .order('created_at', { ascending: true });
                 if (bids && bids.length > 0) {
-                    updates.assignee_id = bids[0].user_id;
+                    updates.assignee_id = (bids as any[])[0].user_id; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+                    // Incentives: Proposal Fee (10 NM for runners-up)
+                    const runnersUp = (bids as any[]).slice(1, 3); // eslint-disable-line @typescript-eslint/no-explicit-any
+                    const proposalFeePromises = runnersUp.map(async (bid: { user_id: string }) => {
+                        if (!supabase) return;
+                        const normalizedBidder = bid.user_id.toLowerCase();
+                        const { data: p } = await supabase.from('profiles' as any).select('nm_balance').eq('wallet_address', normalizedBidder).single(); // eslint-disable-line @typescript-eslint/no-explicit-any
+                        if (p) {
+                            await supabase.from('profiles' as any).update({ nm_balance: ((p as any).nm_balance || 0) + 10 } as unknown as never).eq('wallet_address', normalizedBidder); // eslint-disable-line @typescript-eslint/no-explicit-any
+                            await supabase.from('notifications' as any).insert({ // eslint-disable-line @typescript-eslint/no-explicit-any
+                                user_id: normalizedBidder,
+                                title: 'Proposal Fee Received',
+                                message: `You earned 10 $NM for your valid proposal on "${task.title}".`,
+                                is_read: false,
+                                link: '/guild'
+                            } as unknown as never);
+                        }
+                    });
+                    await Promise.all(proposalFeePromises);
                 }
             } else if (task.status === 'assigned') {
                 nextStatus = 'review';
             } else if (task.status === 'review') {
                 nextStatus = 'done';
                 if (task.assignee_id) {
+                    const normalizedAssignee = task.assignee_id.toLowerCase();
                     const { data: bidData } = await supabase
-                        .from('task_bids')
+                        .from('task_bids' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
                         .select('bid_amount')
                         .eq('task_id', task.id)
-                        .eq('user_id', task.assignee_id)
+                        .eq('user_id', normalizedAssignee)
                         .maybeSingle();
 
                     if (bidData) {
-                        const bidAmountVal = bidData.bid_amount;
+                        const bidAmountVal = (bidData as any).bid_amount; // eslint-disable-line @typescript-eslint/no-explicit-any
 
                         // Calculate Review Multiplier
                         const { data: reviewsData } = await supabase
-                            .from('task_reviews')
+                            .from('task_reviews' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
                             .select('rating')
                             .eq('task_id', task.id);
 
                         let multiplier = 1.0;
                         if (reviewsData && reviewsData.length > 0) {
-                            const avgRating = reviewsData.reduce((acc: number, curr: { rating: number }) => acc + curr.rating, 0) / reviewsData.length;
+                            const avgRating = (reviewsData as any[]).reduce((acc: number, curr: { rating: number }) => acc + curr.rating, 0) / reviewsData.length; // eslint-disable-line @typescript-eslint/no-explicit-any
                             // Multiplier = 1 + ((Avg - 3) * 0.1) (min 1.0)
                             multiplier = Math.max(1.0, 1 + ((avgRating - 3) * 0.1));
                         }
@@ -307,18 +425,52 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
                         const finalReward = Math.round(bidAmountVal * multiplier);
                         updates.final_reward = finalReward;
 
-                        // Automated Payout: Increment knot_balance in profiles
+                        // Automated Payout: Increment nm_balance in profiles
                         const { data: profile } = await supabase
-                            .from('profiles')
-                            .select('knot_balance')
-                            .eq('wallet_address', task.assignee_id)
-                            .single();
+                            .from('profiles' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+                            .select('nm_balance')
+                            .eq('wallet_address', normalizedAssignee)
+                            .maybeSingle();
 
-                        const currentBalance = profile?.knot_balance || 0;
+                        const currentBalance = (profile as any)?.nm_balance || 0; // eslint-disable-line @typescript-eslint/no-explicit-any
                         await supabase
-                            .from('profiles')
-                            .update({ knot_balance: currentBalance + finalReward })
-                            .eq('wallet_address', task.assignee_id);
+                            .from('profiles' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+                            .update({ nm_balance: currentBalance + finalReward } as unknown as never)
+                            .eq('wallet_address', normalizedAssignee);
+
+                        // Incentives: Auditor Reward (5% of Final Reward for Reviewers)
+                        const auditorReward = Math.floor(finalReward * 0.05);
+                        if (auditorReward > 0 && reviewsData && reviewsData.length > 0) {
+                            // Fetch reviewer IDs (reviewsData above only selected rating)
+                            const { data: reviewers } = await supabase
+                                .from('task_reviews' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+                                .select('reviewer_id')
+                                .eq('task_id', task.id);
+
+                            if (reviewers) {
+                                // Unique reviewers only
+                                const uniqueReviewers: string[] = Array.from(new Set((reviewers as any[]).map((r: { reviewer_id: string }) => r.reviewer_id))); // eslint-disable-line @typescript-eslint/no-explicit-any
+                                const auditorPromises = uniqueReviewers.map(async (uid: string) => {
+                                    // Skip if reviewer is assignee (shouldn't happen with RLS but good safety)
+                                    const normalizedReviewer = uid.toLowerCase();
+                                    if (normalizedReviewer === normalizedAssignee) return;
+                                    if (!supabase) return;
+
+                                    const { data: p } = await supabase.from('profiles' as any).select('nm_balance').eq('wallet_address', normalizedReviewer).single(); // eslint-disable-line @typescript-eslint/no-explicit-any
+                                    if (p) {
+                                        await supabase.from('profiles' as any).update({ nm_balance: ((p as any).nm_balance || 0) + auditorReward } as unknown as never).eq('wallet_address', normalizedReviewer); // eslint-disable-line @typescript-eslint/no-explicit-any
+                                        await supabase.from('notifications' as any).insert({ // eslint-disable-line @typescript-eslint/no-explicit-any
+                                            user_id: normalizedReviewer,
+                                            title: 'Auditor Reward!',
+                                            message: `You earned ${auditorReward} $NM for reviewing "${task.title}".`,
+                                            is_read: false,
+                                            link: '/guild'
+                                        } as unknown as never);
+                                    }
+                                });
+                                await Promise.all(auditorPromises);
+                            }
+                        }
                     }
                 }
             }
@@ -326,8 +478,8 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
             if (nextStatus === task.status) return;
 
             const { error: updateError } = await supabase
-                .from('tasks')
-                .update({ status: nextStatus, ...updates })
+                .from('tasks' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+                .update({ status: nextStatus, ...updates } as unknown as never)
                 .eq('id', task.id);
 
             if (updateError) {
@@ -340,19 +492,38 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
                 const msgKey = nextStatus === 'bidding' ? 'votingEnded' : (nextStatus === 'assigned' ? 'biddingEnded' : null);
                 if (msgKey) {
                     const notificationMessages = t.notifications as Record<string, string>;
-                    await supabase.from('notifications').insert({
+
+                    // Notify task followers (favorites)
+                    const { data: fans } = await supabase
+                        .from('task_favorites' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+                        .select('user_id')
+                        .eq('task_id', task.id);
+
+                    if (fans && fans.length > 0) {
+                        const fanNotifications = fans.map((f: { user_id: string }) => ({
+                            user_id: f.user_id,
+                            title: t.notifications.title,
+                            message: language === 'ja'
+                                ? `お気に入り済みの「${task.title}」が「${nextStatus}」に移行しました！`
+                                : `Favorited quest "${task.title}" has moved to "${nextStatus}"!`,
+                            is_read: false,
+                            link: '/guild'
+                        }));
+                        await supabase.from('notifications' as any).insert(fanNotifications as unknown as never); // eslint-disable-line @typescript-eslint/no-explicit-any
+                    }
+
+                    // Global/General Notification
+                    await supabase.from('notifications' as any).insert({ // eslint-disable-line @typescript-eslint/no-explicit-any
                         title: t.notifications.title,
                         message: language === 'ja'
                             ? `「${task.title}」${notificationMessages[msgKey]}`
                             : `${notificationMessages[msgKey]}"${task.title}"`,
                         is_read: false,
                         link: '/guild'
-                    });
+                    } as unknown as never);
                 }
             } catch (notifErr) {
                 console.error("Notification insert error:", notifErr);
-                // Don't fail the whole transition if only notification fails, 
-                // but let's log it.
             }
 
             if (onUpdated) onUpdated();
@@ -365,30 +536,32 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
             setIsSubmitting(false);
         }
     };
+
     const handleWorkSubmit = async () => {
         if (!task || !supabase) return;
         setIsSubmitting(true);
         try {
             const { error: updateError } = await supabase
-                .from('tasks')
+                .from('tasks' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
                 .update({
                     status: 'review',
                     completion_report: reportComment,
                     completion_link: reportLink
-                })
+                } as unknown as never)
                 .eq('id', task.id);
 
             if (updateError) throw updateError;
 
             // Notification for creator
             if (task.creator_id) {
-                await supabase.from('notifications').insert({
-                    user_id: task.creator_id,
+                const normalizedCreator = task.creator_id.toLowerCase();
+                await supabase.from('notifications' as any).insert({ // eslint-disable-line @typescript-eslint/no-explicit-any
+                    user_id: normalizedCreator,
                     title: 'Work Submitted!',
                     message: `Assignee submitted work for: ${task.title}. Review needed.`,
                     is_read: false,
                     link: '/guild'
-                });
+                } as unknown as never);
             }
 
             if (onUpdated) onUpdated();
@@ -412,13 +585,13 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
         setIsSubmitting(true);
         try {
             const { error: reviewError } = await supabase
-                .from('task_reviews')
+                .from('task_reviews' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
                 .insert({
                     task_id: task.id,
-                    reviewer_id: currentUserAddress,
+                    reviewer_id: currentUserAddress.toLowerCase(),
                     rating: evalRating,
                     comment: evalComment
-                });
+                } as unknown as never);
 
             if (reviewError) throw reviewError;
 
@@ -446,13 +619,13 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
 
         setIsSubmitting(true);
         try {
-            await supabase.from('task_bids').upsert({
+            await supabase.from('task_bids' as any).upsert({ // eslint-disable-line @typescript-eslint/no-explicit-any
                 task_id: task.id,
-                user_id: currentUserAddress,
+                user_id: currentUserAddress.toLowerCase(),
                 bid_amount: Number(bidAmount),
                 comment: bidComment,
                 created_at: new Date().toISOString()
-            });
+            } as unknown as never);
             setHasBidded(true);
             fetchBidStats();
         } catch (e) {
@@ -478,11 +651,81 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
                         </Stack>
                         <Typography variant="caption" color="text.secondary">{t.guild.taskDetail.id}: {task.id}</Typography>
                     </Box>
-                    <Chip label={task.status} color="primary" variant="outlined" size="small" />
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                        <IconButton
+                            onClick={handleToggleFavorite}
+                            sx={{ color: isFavorited ? '#FFD700' : 'text.secondary' }}
+                        >
+                            {isFavorited ? <StarIcon /> : <StarBorderIcon />}
+                        </IconButton>
+                        <Chip label={task.status} color="primary" variant="outlined" size="small" />
+                    </Stack>
                 </Stack>
             </DialogTitle>
             <DialogContent dividers>
                 <Stack spacing={3}>
+                    {/* Tutorial Guidance Box */}
+                    {task.tags?.includes('tutorial') && step !== 'NONE' && step !== 'COMPLETED' && (
+                        <Box sx={{
+                            p: 2,
+                            mb: 2,
+                            bgcolor: 'rgba(212, 175, 55, 0.1)',
+                            border: '1px solid #D4AF37',
+                            borderRadius: 2,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 1.5
+                        }}>
+                            <Typography variant="subtitle2" sx={{ color: '#D4AF37', fontWeight: 'bold' }}>
+                                ✨ TUTORIAL GUIDE
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#E0E6ED' }}>
+                                {t.tutorial.steps[step as keyof typeof t.tutorial.steps]}
+                            </Typography>
+
+                            {/* Special skip logic for creator restrictions */}
+                            {(step === 'VOTE' || step === 'BID') && task.creator_id?.toLowerCase() === currentUserAddress?.toLowerCase() && (
+                                <Box>
+                                    <Alert severity="warning" variant="outlined" sx={{ mb: 1.5, borderColor: '#D4AF37', color: '#D4AF37' }}>
+                                        {t.tutorial.skip_notice}
+                                    </Alert>
+                                    <Button
+                                        variant="contained"
+                                        fullWidth
+                                        onClick={async () => {
+                                            await handleForceTransition();
+                                            nextStep();
+                                        }}
+                                        disabled={isSubmitting}
+                                        sx={{ bgcolor: '#D4AF37', color: '#000', '&:hover': { bgcolor: '#F9A825' } }}
+                                    >
+                                        {t.common.next || "Next Step"}
+                                    </Button>
+                                </Box>
+                            )}
+
+                            {step === 'REVIEW' && (
+                                <Box>
+                                    <Typography variant="body2" sx={{ color: '#94A3B8', mb: 1.5 }}>
+                                        {t.tutorial.finish_notice}
+                                    </Typography>
+                                    <Button
+                                        variant="contained"
+                                        fullWidth
+                                        onClick={async () => {
+                                            await handleForceTransition();
+                                            nextStep();
+                                        }}
+                                        disabled={isSubmitting}
+                                        sx={{ bgcolor: '#D4AF37', color: '#000', '&:hover': { bgcolor: '#F9A825' } }}
+                                    >
+                                        {t.common.finish || "Finish Tutorial"}
+                                    </Button>
+                                </Box>
+                            )}
+                        </Box>
+                    )}
+
                     <Box>
                         <Typography variant="subtitle2" color="text.secondary">{t.guild.taskDetail.description}</Typography>
                         <Typography variant="body1" sx={{ mt: 1, whiteSpace: 'pre-wrap' }}>
@@ -513,7 +756,9 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
                                     <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem' }}>
                                         {task.assignee_id.substring(0, 2).toUpperCase()}
                                     </Avatar>
-                                    <Typography variant="body2">{task.assignee_id.substring(0, 6)}...</Typography>
+                                    <Typography variant="body2">
+                                        {assigneeName ? assigneeName : `${task.assignee_id.substring(0, 6)}...`}
+                                    </Typography>
                                 </Stack>
                             ) : (
                                 <Typography variant="body2" color="text.disabled">{t.guild.taskDetail.unassigned}</Typography>
@@ -603,6 +848,8 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
                                         disabled={isSubmitting}
                                         error={Number(bidAmount) > (task.story_points || 0) * 10}
                                         helperText={Number(bidAmount) > (task.story_points || 0) * 10 ? t.guild.taskDetail.bidding.maxBidError.replace('{limit}', ((task.story_points || 0) * 10).toString()) : ""}
+                                        InputLabelProps={{ shrink: true }}
+                                        InputProps={{ label: `${t.guild.taskDetail.bidding.bidAmount} (Max: ${(task.story_points || 0) * 10})` }}
                                     />
                                     <TextField
                                         label={t.guild.taskDetail.bidding.comment}
@@ -612,6 +859,8 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
                                         multiline
                                         rows={2}
                                         disabled={isSubmitting}
+                                        InputLabelProps={{ shrink: true }}
+                                        InputProps={{ label: t.guild.taskDetail.bidding.comment }}
                                     />
                                     <Button
                                         variant="contained"
@@ -645,7 +894,7 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
                                                 {bid.profiles?.username || `${bid.user_id.substring(0, 8)}...`}
                                             </Typography>
                                             <Typography variant="body2" color="primary.main" fontWeight="bold">
-                                                {bid.bid_amount} $KNOT
+                                                {bid.bid_amount} $NM
                                             </Typography>
                                             {bid.comment && (
                                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
@@ -688,6 +937,8 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
                                         rows={4}
                                         fullWidth
                                         disabled={isSubmitting}
+                                        InputLabelProps={{ shrink: true }}
+                                        InputProps={{ label: t.guild.taskDetail.submission.comment }}
                                     />
                                     <TextField
                                         label={t.guild.taskDetail.submission.link}
@@ -695,6 +946,8 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
                                         onChange={e => setReportLink(e.target.value)}
                                         fullWidth
                                         disabled={isSubmitting}
+                                        InputLabelProps={{ shrink: true }}
+                                        InputProps={{ label: t.guild.taskDetail.submission.link }}
                                     />
                                     <Button
                                         variant="contained"
@@ -756,6 +1009,8 @@ export function TaskDetailDialog({ open, onClose, task, currentUserAddress, curr
                                         rows={2}
                                         fullWidth
                                         disabled={isSubmitting}
+                                        InputLabelProps={{ shrink: true }}
+                                        InputProps={{ label: t.guild.taskDetail.review360.comment }}
                                     />
                                     <Button
                                         variant="outlined"
