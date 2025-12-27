@@ -2,8 +2,9 @@
 
 import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { Web3Auth } from "@web3auth/modal";
-import { CHAIN_NAMESPACES, IProvider, WEB3AUTH_NETWORK } from "@web3auth/base";
+import { CHAIN_NAMESPACES, IProvider, WEB3AUTH_NETWORK, WEB3AUTH_NETWORK_TYPE, UX_MODE } from "@web3auth/base";
 import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
+import { AuthAdapter } from "@web3auth/auth-adapter";
 
 // Context type
 interface AuthContextType {
@@ -65,11 +66,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     config: { chainConfig },
                 });
 
+                const web3AuthNetwork = (process.env.NEXT_PUBLIC_WEB3AUTH_NETWORK as WEB3AUTH_NETWORK_TYPE) || WEB3AUTH_NETWORK.SAPPHIRE_DEVNET;
+
                 const web3authInstance = new Web3Auth({
                     clientId,
-                    web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
+                    web3AuthNetwork,
                     privateKeyProvider,
                 });
+
+                // Add AuthAdapter for redirect mode
+                const authAdapter = new AuthAdapter({
+                    adapterSettings: {
+                        uxMode: UX_MODE.REDIRECT,
+                    },
+                    privateKeyProvider,
+                });
+                web3authInstance.configureAdapter(authAdapter);
 
                 // Race between init and timeout
                 await Promise.race([
