@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Dialog,
     DialogTitle,
@@ -20,7 +20,8 @@ import {
 import { Check as CheckIcon } from "@mui/icons-material";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/components/providers/language-provider";
-// import { useAuth } from "@/components/providers/auth-provider";
+import { useTutorial } from "@/components/providers/tutorial-provider";
+import { createNotification } from "@/app/actions/notifications";
 
 interface CreateTaskDialogProps {
     open: boolean;
@@ -41,8 +42,8 @@ const AVAILABLE_SKILLS = [
 ];
 
 export function CreateTaskDialog({ open, onClose, onCreated, creatorAddress }: CreateTaskDialogProps) {
-    // const { provider } = useAuth(); 
     const { t } = useLanguage();
+    const { step, nextStep } = useTutorial();
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [tags, setTags] = useState<string[]>([]);
@@ -50,6 +51,15 @@ export function CreateTaskDialog({ open, onClose, onCreated, creatorAddress }: C
     const [biddingDurationHours, setBiddingDurationHours] = useState(48);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Pre-fill for tutorial
+    useEffect(() => {
+        if (open && step === 'CREATE_TASK') {
+            setTitle("Tutorial Voyage: The First Step");
+            setDescription("This is a tutorial mission to learn the ropes. You are the creator of this mission!");
+            setTags(["Navigator", "Scholar"]);
+        }
+    }, [open, step]);
 
     const toggleTag = (tag: string) => {
         setTags(prev =>
@@ -69,33 +79,46 @@ export function CreateTaskDialog({ open, onClose, onCreated, creatorAddress }: C
 
             const votingEndsAt = new Date(Date.now() + durationHours * 3600 * 1000).toISOString();
 
+            // Ensure tutorial tasks are marked
+            const finalTags = step !== 'NONE' && step !== 'COMPLETED'
+                ? Array.from(new Set([...tags, 'tutorial']))
+                : tags;
+
             const { error: insertError } = await supabase
-                .from('tasks')
+                .from('tasks' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
                 .insert({
                     title,
                     description,
                     status: 'voting',
-                    tags,
+                    tags: finalTags,
                     voting_ends_at: votingEndsAt,
                     bidding_duration: biddingDurationHours * 60, // Store in minutes
-                    creator_id: creatorAddress
-                });
+                    creator_id: creatorAddress?.toLowerCase() || null
+                } as unknown as never);
 
             if (insertError) throw insertError;
 
             // Send Notification (Global for now, by omitting user_id)
-            await supabase.from('notifications').insert({
-                title: t.notifications.title,
-                message: `${t.notifications.newMission}${title}`,
-                is_read: false,
-                link: '/guild'
-            });
+            if (!finalTags.includes('tutorial')) {
+                await createNotification({
+                    userId: null,
+                    title: t.notifications.title,
+                    message: `${t.notifications.newMission}${title}`,
+                    link: '/guild',
+                    type: 'info'
+                });
+            }
 
             setTitle("");
             setDescription("");
             setTags([]);
             setDurationHours(24);
             setBiddingDurationHours(48);
+
+            if (step === 'CREATE_TASK') {
+                nextStep(); // Advance tutorial to VOTE
+            }
+
             onCreated();
             onClose();
         } catch (err: unknown) {

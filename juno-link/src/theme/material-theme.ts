@@ -1,4 +1,8 @@
+
 import { createTheme } from '@mui/material/styles';
+
+// Note: Fonts are loaded in layout.tsx using next/font, but we reference their CSS variable names here.
+// The fallback fonts are essential.
 
 // Extend MUI theme types for M3 colors
 declare module '@mui/material/styles' {
@@ -15,6 +19,10 @@ declare module '@mui/material/styles' {
             main: string;
             variant: string;
         };
+        onSurface: {
+            main: string;
+            variant: string;
+        }
     }
     interface PaletteOptions {
         tertiary?: PaletteOptions['primary'];
@@ -29,223 +37,189 @@ declare module '@mui/material/styles' {
             main?: string;
             variant?: string;
         };
+        onSurface?: {
+            main?: string;
+            variant?: string;
+        }
     }
 }
 
-// Material Design 3 Theme with Japanese Optimization
+// "Golden Voyage" Theme
 export const theme = createTheme({
     palette: {
-        mode: 'light',
+        mode: 'dark', // Forced dark mode for atmosphere
         primary: {
-            main: '#006493',           // Primary-40
-            light: '#4C91BF',
-            dark: '#004A74',
-            contrastText: '#FFFFFF',
+            main: '#D4AF37',           // Gold (Starlight/Brass) - Used for Action Buttons
+            light: '#F9A825',
+            dark: '#917926',
+            contrastText: '#000000',
         },
         secondary: {
-            main: '#4C5F6D',           // Secondary-40
-            light: '#748895',
-            dark: '#334450',
-            contrastText: '#FFFFFF',
+            main: '#4CB5F5',           // Sky Blue (Horizon) - Used for Secondary Accents
+            light: '#84D8FF',
+            dark: '#1677B1',
+            contrastText: '#000000',
         },
         tertiary: {
-            main: '#5D5B7D',           // Tertiary-40
-            light: '#8682A5',
-            dark: '#454360',
+            main: '#B8860B',           // Dark Goldenrod
+            light: '#E2B857',
+            dark: '#845E00',
             contrastText: '#FFFFFF',
         },
         error: {
-            main: '#BA1A1A',           // Error-40
-            light: '#F2B8B5',
-            dark: '#690005',
-            contrastText: '#FFFFFF',
-        },
-        warning: {
-            main: '#8B5000',           // Warning-40
-            light: '#FFB77C',
-        },
-        info: {
-            main: '#006493',
-        },
-        success: {
-            main: '#006E26',           // Success-40
-            light: '#6FDB8D',
+            main: '#CF6679',           // M3 Error Dark
+            light: '#FF99AA',
+            dark: '#9B334C',
         },
         background: {
-            default: '#FDFBFF',        // Neutral-99
-            paper: '#FDFBFF',
+            default: '#051E3E',        // Deep Ocean Blue
+            paper: 'rgba(13, 25, 41, 0.7)', // Glassy Dark
         },
         surface: {
-            main: '#FDFBFF',
-            variant: '#DDE3EA',        // Neutral-Variant-90
+            main: 'rgba(13, 25, 41, 0.7)',
+            variant: 'rgba(255, 255, 255, 0.05)',
         },
-        surfaceTint: {
-            main: '#006493',           // Primary-40 for tinting
-        },
-        outline: {
-            main: '#6F777F',           // Neutral-Variant-50
-            variant: '#BFC8CE',        // Neutral-Variant-80
+        onSurface: {
+            main: '#E0E6ED',           // Moonlight White
+            variant: '#94A3B8',        // Muted Blue-Grey
         },
         text: {
-            primary: '#191C1E',        // Neutral-10
-            secondary: '#42474B',      // Neutral-Variant-30
-            disabled: '#A9B0B7',
+            primary: '#E0E6ED',
+            secondary: '#94A3B8',
         },
+        divider: 'rgba(212, 175, 55, 0.2)', // Subtle Gold Divider
     },
     typography: {
-        fontFamily: [
-            'Noto Sans JP',       // Japanese primary
-            'Roboto',             // English fallback
-            'sans-serif',
-        ].join(','),
+        fontFamily: 'var(--font-lato), sans-serif',
         h1: {
-            fontWeight: 300,
-            fontSize: '6rem',
-            lineHeight: 1.7,      // Japanese optimization
-            letterSpacing: '-0.01562em',
+            fontFamily: 'var(--font-cinzel), serif',
+            fontWeight: 700,
+            letterSpacing: '0.05em',
+            color: '#D4AF37', // Gold Headings
         },
         h2: {
-            fontWeight: 300,
-            fontSize: '3.75rem',
-            lineHeight: 1.7,
-            letterSpacing: '-0.00833em',
+            fontFamily: 'var(--font-cinzel), serif',
+            fontWeight: 600,
+            letterSpacing: '0.05em',
+            color: '#E0E6ED',
         },
         h3: {
-            fontWeight: 400,
-            fontSize: '3rem',
-            lineHeight: 1.7,
-            letterSpacing: '0em',
+            fontFamily: 'var(--font-cinzel), serif',
+            fontWeight: 600,
         },
         h4: {
-            fontWeight: 400,
-            fontSize: '2.125rem',
-            lineHeight: 1.7,
-            letterSpacing: '0.00735em',
+            fontFamily: 'var(--font-cinzel), serif',
+            fontWeight: 600,
         },
         h5: {
-            fontWeight: 400,
-            fontSize: '1.5rem',
-            lineHeight: 1.7,
-            letterSpacing: '0em',
+            fontFamily: 'var(--font-cinzel), serif',
+            fontWeight: 600,
         },
         h6: {
-            fontWeight: 500,
-            fontSize: '1.25rem',
-            lineHeight: 1.7,
-            letterSpacing: '0.0075em',
-        },
-        body1: {
-            fontWeight: 400,
-            fontSize: '1rem',
-            lineHeight: 1.7,      // Japanese optimization
-            letterSpacing: '0.05em',
-        },
-        body2: {
-            fontWeight: 400,
-            fontSize: '0.875rem',
-            lineHeight: 1.7,
-            letterSpacing: '0.05em',
+            fontFamily: 'var(--font-cinzel), serif',
+            fontWeight: 600,
+            letterSpacing: '0.02em',
         },
         button: {
-            fontWeight: 500,
+            fontFamily: 'var(--font-cinzel), serif', // Buttons use serif for impact
+            fontWeight: 700,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+        },
+        body1: {
+            fontFamily: 'var(--font-lato), sans-serif',
+            fontSize: '1rem',
+            lineHeight: 1.6,
+        },
+        body2: {
+            fontFamily: 'var(--font-lato), sans-serif',
             fontSize: '0.875rem',
-            lineHeight: 1.75,
-            letterSpacing: '0.02857em',
-            textTransform: 'none',  // Disable uppercase for Japanese
+            lineHeight: 1.6,
+            color: '#94A3B8',
         },
     },
     shape: {
-        borderRadius: 12,         // M3 uses 12dp for medium components
+        borderRadius: 16,
     },
     components: {
         MuiButton: {
             styleOverrides: {
                 root: {
-                    borderRadius: 20,     // M3 full-rounded buttons
-                    padding: '10px 24px',
-                    fontWeight: 500,
-                    textTransform: 'none',
-                    boxShadow: 'none',
+                    borderRadius: 4,      // Slight rounding, classical feel
+                    backdropFilter: 'blur(4px)',
                 },
                 contained: {
+                    background: 'linear-gradient(45deg, #D4AF37 30%, #F9A825 90%)',
+                    color: '#051E3E',
+                    border: '1px solid #D4AF37',
+                    boxShadow: '0 3px 5px 2px rgba(212, 175, 55, .3)',
                     '&:hover': {
-                        boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15)',
-                    },
+                        background: 'linear-gradient(45deg, #F9A825 30%, #FFD700 90%)',
+                        boxShadow: '0 3px 15px 2px rgba(212, 175, 55, .5)',
+                    }
                 },
                 outlined: {
-                    borderWidth: '1px',
+                    borderColor: '#D4AF37',
+                    color: '#D4AF37',
                     '&:hover': {
-                        borderWidth: '1px',
-                        backgroundColor: 'rgba(0, 100, 147, 0.08)', // State layer
-                    },
-                },
+                        borderColor: '#FFD700',
+                        backgroundColor: 'rgba(212, 175, 55, 0.1)',
+                    }
+                }
             },
         },
         MuiCard: {
             styleOverrides: {
                 root: {
-                    borderRadius: 12,      // M3 medium shape
-                    boxShadow: '0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px rgba(0, 0, 0, 0.3)', // Elevation 1
-                    transition: 'box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1)',
-                    '&:hover': {
-                        boxShadow: '0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px rgba(0, 0, 0, 0.3)', // Elevation 2
-                    },
-                },
-            },
-        },
-        MuiChip: {
-            styleOverrides: {
-                root: {
-                    fontWeight: 500,
-                    letterSpacing: ' 0.1px',
-                    borderRadius: 8,       // M3 small shape
-                },
-                filled: {
-                    backgroundColor: '#DDE3EA', // Surface-variant
-                },
-            },
-        },
-        MuiTextField: {
-            styleOverrides: {
-                root: {
-                    '& .MuiOutlinedInput-root': {
-                        borderRadius: 4,    // M3 extra-small shape for text fields
-                    },
-                },
-            },
-        },
-        MuiAppBar: {
-            styleOverrides: {
-                root: {
-                    boxShadow: 'none',
-                    borderBottom: '1px solid #DDE3EA',
+                    background: 'rgba(5, 30, 62, 0.4)', // Glassmorphism
+                    backdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(212, 175, 55, 0.15)', // Subtle gold border
+                    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
                 },
             },
         },
         MuiPaper: {
             styleOverrides: {
-                rounded: {
-                    borderRadius: 12,
-                },
-                elevation1: {
-                    boxShadow: '0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px rgba(0, 0, 0, 0.3)',
-                },
-                elevation2: {
-                    boxShadow: '0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px rgba(0, 0, 0, 0.3)',
-                },
-                elevation3: {
-                    boxShadow: '0px 4px 8px 3px rgba(0, 0, 0, 0.15), 0px 1px 3px rgba(0, 0, 0, 0.3)',
+                root: {
+                    backgroundImage: 'none', // Remove default brightness overlay in dark mode
+                    backgroundColor: 'rgba(13, 25, 41, 0.8)',
+                    backdropFilter: 'blur(10px)',
                 },
             },
         },
+        MuiDialog: {
+            styleOverrides: {
+                paper: {
+                    background: '#051E3E', // Solid background for dialogs to prevent too much transparency
+                    border: '1px solid #D4AF37',
+                }
+            }
+        },
+        MuiChip: {
+            styleOverrides: {
+                root: {
+                    borderRadius: 4,
+                    fontFamily: 'var(--font-cinzel), serif',
+                    fontWeight: 600,
+                },
+                filled: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                },
+                colorPrimary: {
+                    backgroundColor: 'rgba(212, 175, 55, 0.2)',
+                    color: '#FFD700',
+                    border: '1px solid rgba(212, 175, 55, 0.3)',
+                }
+            }
+        }
     },
 });
 
-// Rank-specific colors (M3 compliant)
+// Rank colors for custom usage
 export const rankColors = {
-    guest: '#6F777F',      // Neutral-Variant-50
-    deckhand: '#006493',   // Primary-40 (Blue)
-    skipper: '#8B5000',    // Warning-40 (Amber/Gold)
-    admiral: '#FFD700',    // Gold
+    guest: '#64748B',      // Slate
+    deckhand: '#38BDF8',   // Sky
+    skipper: '#D4AF37',    // Gold
+    admiral: '#FF4D4D',    // Crimson
 };
-

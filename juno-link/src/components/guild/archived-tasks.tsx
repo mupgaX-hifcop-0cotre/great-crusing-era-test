@@ -66,16 +66,17 @@ export function ArchivedTasks() {
                     transport: custom(provider),
                 });
                 const [addr] = await walletClient.requestAddresses();
-                setCurrentUserAddress(addr);
+                const normalizedAddr = addr.toLowerCase();
+                setCurrentUserAddress(normalizedAddr);
 
                 const { data } = await supabase
-                    .from('profiles')
+                    .from('profiles' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
                     .select('rank')
-                    .eq('wallet_address', addr)
-                    .single();
+                    .eq('wallet_address', normalizedAddr)
+                    .maybeSingle();
 
                 if (data) {
-                    setCurrentUserRank(data.rank || 0);
+                    setCurrentUserRank((data as any).rank || 0); // eslint-disable-line @typescript-eslint/no-explicit-any
                 }
             } catch (err) {
                 console.error("Error fetching user data:", err);

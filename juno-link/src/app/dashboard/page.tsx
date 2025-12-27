@@ -9,21 +9,22 @@ import { polygonAmoy } from "viem/chains";
 import {
     Box,
     Container,
-    Card,
-    CardContent,
+    Button,
+    Avatar,
+    Snackbar,
+    Alert,
     Typography,
-    IconButton,
-    Chip,
-    CircularProgress,
     Stack,
-    Divider,
+    Chip,
+    Tooltip,
+    Paper,
+    ButtonBase,
+    IconButton,
     Menu,
     MenuItem,
+    Divider,
+    CircularProgress,
     ListItemIcon,
-    Paper,
-    Tooltip,
-    ButtonBase,
-    Avatar,
 } from "@mui/material";
 import { motion } from "framer-motion";
 import {
@@ -36,13 +37,17 @@ import {
     ListAlt as ListAltIcon,
     Assignment as AssignmentIcon,
     Language as LanguageIcon,
+    Visibility,
+    VisibilityOff,
 } from "@mui/icons-material";
 import { WaveBackground } from "@/components/ui/wave-background";
 import { ProfileEditDialog } from "@/components/profile-edit-dialog";
 import { NotificationCenter } from "@/components/ui/notification-center";
 import { supabase } from "@/lib/supabase";
 import { rankColors } from "@/theme/material-theme";
-import { Task } from "@/types";
+import { Task, Profile } from "@/types";
+
+import { OnboardingOverlay } from "@/components/onboarding/onboarding-overlay";
 
 export default function DashboardPage() {
     const { loggedIn, provider, logout } = useAuth();
@@ -57,11 +62,17 @@ export default function DashboardPage() {
     // Profile State
     const [displayName, setDisplayName] = useState<string>("");
     const [displayBio, setDisplayBio] = useState<string>("");
+    const [showAddress, setShowAddress] = useState(false);
     const [avatarUrl, setAvatarUrl] = useState<string>("");
     const [archetype, setArchetype] = useState<string>("");
     const [skills, setSkills] = useState<string[]>([]);
-    const [knotBalance, setKnotBalance] = useState<number>(0);
+    const [nmBalance, setNmBalance] = useState<number>(0);
     const [recommendedTasks, setRecommendedTasks] = useState<Task[]>([]);
+    const [openError, setOpenError] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+
+    // Onboarding State
+    const [showOnboarding, setShowOnboarding] = useState(false);
 
     // Menu State
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -93,13 +104,20 @@ export default function DashboardPage() {
     // Function to reload profile data from Supabase
     const loadProfile = async (addr: string) => {
         if (!supabase) return;
+        const normalizedAddr = addr.toLowerCase();
 
         try {
-            const { data, error } = await supabase
+            const { data: dataRaw, error } = await supabase
                 .from('profiles')
                 .select('*')
-                .eq('wallet_address', addr)
-                .single();
+                .eq('wallet_address', normalizedAddr)
+                .maybeSingle();
+
+            if (error) {
+                console.error("Supabase error fetching profile:", error);
+            }
+
+            const data = dataRaw as Profile | null;
 
             if (data) {
                 setDisplayName(data.username || `船員 ${addr.slice(0, 6)}`);
@@ -111,12 +129,17 @@ export default function DashboardPage() {
                     setRankId(data.rank);
                 }
 
-                if (data.knot_balance !== undefined) {
-                    setKnotBalance(data.knot_balance);
+                if (data.nm_balance !== undefined) {
+                    setNmBalance(data.nm_balance);
                 }
 
                 if (data.archetype) {
                     setArchetype(data.archetype);
+                }
+
+                // Onboarding Check: Rank 0 + No NM = Needs Onboarding
+                if ((data.rank || 0) === 0 && (data.nm_balance || 0) < 100) {
+                    setShowOnboarding(true);
                 }
 
                 if (data.skills && data.skills.length > 0) {
@@ -133,21 +156,23 @@ export default function DashboardPage() {
                 } else {
                     setRecommendedTasks([]);
                 }
-            } else if (error && error.code === 'PGRST116') {
-                // Not found, create default
+            } else if (!data) {
+                // Not found (maybeSingle returns data:null if not found)
                 const { error: insertError } = await supabase
-                    .from('profiles')
+                    .from('profiles' as any) // eslint-disable-line @typescript-eslint/no-explicit-any
                     .insert([{
-                        wallet_address: addr,
-                        username: `船員 ${addr.slice(0, 6)}`,
+                        wallet_address: normalizedAddr,
+                        username: `船員 ${normalizedAddr.slice(0, 6)}`,
                         rank: 0,
                         skills: []
-                    }]);
+                    }] as unknown as never);
 
                 if (!insertError) {
                     setDisplayName(`船員 ${addr.slice(0, 6)}`);
                     setDisplayBio("");
                     setSkills([]);
+                    // New user -> Show Onboarding
+                    setShowOnboarding(true);
                 }
             }
         } catch (err) {
@@ -171,9 +196,10 @@ export default function DashboardPage() {
                 });
 
                 const [addr] = await walletClient.requestAddresses();
-                setAddress(addr);
+                const normalizedAddr = addr.toLowerCase();
+                setAddress(normalizedAddr);
 
-                await loadProfile(addr);
+                await loadProfile(normalizedAddr);
 
                 const publicClient = createPublicClient({
                     chain: polygonAmoy,
@@ -230,6 +256,21 @@ export default function DashboardPage() {
         return t.ranks.guest;
     };
 
+    // Awakening Handler
+    const handleAwakening = () => {
+        // Condition: If Rank > 0 (already awakened), need 100 NM to re-awaken
+        if (rankId >= 1) {
+            if (nmBalance < 100) {
+                // Show error
+                setErrorMessage(t.errors?.insufficientNM || "Insufficient Nautical Miles ($NM). You need 100 $NM to re-awaken.");
+                setOpenError(true);
+                return;
+            }
+        }
+        // Proceed
+        router.push('/awakening');
+    };
+
     return (
         <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
             <WaveBackground />
@@ -245,21 +286,24 @@ export default function DashboardPage() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    zIndex: 20,
+                    zIndex: 10,
                 }}
             >
-                <Stack direction="row" alignItems="center">
+                <Stack direction="row" alignItems="center" spacing={2}>
                     <IconButton
-                        size="large"
-                        edge="start"
-                        color="inherit"
-                        aria-label="menu"
                         onClick={handleMenuOpen}
-                        sx={{ mr: 2, color: "onSurface.main", bgcolor: 'rgba(255,255,255,0.5)', '&:hover': { bgcolor: 'rgba(255,255,255,0.8)' } }}
+                        sx={{
+                            color: "primary.main",
+                            bgcolor: 'rgba(255, 255, 255, 0.1)',
+                            backdropFilter: 'blur(10px)',
+                            '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.2)' }
+                        }}
                     >
                         <MenuIcon />
                     </IconButton>
+                </Stack>
 
+                <Stack direction="row" alignItems="center" spacing={2}>
                     <Box
                         component="img"
                         src="/assets/logo.jpg"
@@ -271,106 +315,159 @@ export default function DashboardPage() {
                             objectFit: 'contain'
                         }}
                     />
-                    <Typography variant="h6" component="div" sx={{ fontWeight: 500, color: "onSurface.main" }}>
-                        {t.login.title}
+                    <Typography variant="h6" component="div" sx={{ fontFamily: 'var(--font-cinzel)', fontWeight: 700, color: "var(--primary-gold)" }}>
+                        CAPTAIN&apos;S LOG
                     </Typography>
                 </Stack>
-
 
                 <Stack direction="row" alignItems="center" spacing={1}>
                     <NotificationCenter userAddress={address} />
                 </Stack>
-
-                <Menu
-                    anchorEl={anchorEl}
-                    open={openMenu}
-                    onClose={handleMenuClose}
-                    PaperProps={{
-                        elevation: 3,
-                        sx: {
-                            borderRadius: 3,
-                            minWidth: 240,
-                            mt: 1,
-                        }
-                    }}
-                    transformOrigin={{ horizontal: 'left', vertical: 'top' }}
-                    anchorOrigin={{ horizontal: 'left', vertical: 'bottom' }}
-                >
-                    <MenuItem onClick={() => { toggleLanguage(); handleMenuClose(); }}>
-                        <ListItemIcon>
-                            <LanguageIcon fontSize="small" />
-                        </ListItemIcon>
-                        {language === 'ja' ? 'English' : '日本語'}
-                    </MenuItem>
-
-                    <Divider />
-
-                    <MenuItem onClick={handleGuildNavigate}>
-                        <ListItemIcon>
-                            <ListAltIcon fontSize="small" />
-                        </ListItemIcon>
-                        {t.dashboard.guildBoard}
-                    </MenuItem>
-
-                    {address.toLowerCase() === "0x264C351Ace86F18D620a12007A959AEcC02F7DDe".toLowerCase() && (
-                        <MenuItem onClick={handleAdminNavigate}>
-                            <ListItemIcon>
-                                <SettingsIcon fontSize="small" />
-                            </ListItemIcon>
-                            {t.dashboard.adminPanel}
-                        </MenuItem>
-                    )}
-
-                    <MenuItem onClick={handleLogout}>
-                        <ListItemIcon>
-                            <LogoutIcon fontSize="small" color="error" />
-                        </ListItemIcon>
-                        <Typography color="error">
-                            {t.dashboard.logout}
-                        </Typography>
-                    </MenuItem>
-                </Menu>
             </Box>
 
+            <Menu
+                anchorEl={anchorEl}
+                open={openMenu}
+                onClose={handleMenuClose}
+                PaperProps={{
+                    elevation: 3,
+                    sx: {
+                        borderRadius: 3,
+                        minWidth: 240,
+                        mt: 1,
+                    }
+                }}
+                transformOrigin={{ horizontal: 'left', vertical: 'top' }}
+                anchorOrigin={{ horizontal: 'left', vertical: 'bottom' }}
+            >
+                <MenuItem onClick={() => { toggleLanguage(); handleMenuClose(); }}>
+                    <ListItemIcon>
+                        <LanguageIcon fontSize="small" />
+                    </ListItemIcon>
+                    {language === 'ja' ? 'English' : '日本語'}
+                </MenuItem>
+
+                <Divider />
+
+                <MenuItem onClick={handleGuildNavigate}>
+                    <ListItemIcon>
+                        <ListAltIcon fontSize="small" />
+                    </ListItemIcon>
+                    {t.dashboard.guildBoard}
+                </MenuItem>
+
+                {address.toLowerCase() === "0x264C351Ace86F18D620a12007A959AEcC02F7DDe".toLowerCase() && (
+                    <MenuItem onClick={handleAdminNavigate}>
+                        <ListItemIcon>
+                            <SettingsIcon fontSize="small" />
+                        </ListItemIcon>
+                        {t.dashboard.adminPanel}
+                    </MenuItem>
+                )}
+
+                <MenuItem onClick={handleLogout}>
+                    <ListItemIcon>
+                        <LogoutIcon fontSize="small" color="error" />
+                    </ListItemIcon>
+                    <Typography color="error">
+                        {t.dashboard.logout}
+                    </Typography>
+                </MenuItem>
+            </Menu>
+
             {/* Main Content */}
-            <Container maxWidth="lg" sx={{ mt: 12, mb: 4, position: "relative", zIndex: 10 }}>
-                <Box
-                    component={motion.div}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.5 }}
-                    sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}
-                >
-                    {/* Captain's Log Card */}
-                    <Box
-                        component={motion.div}
+            <Container maxWidth="lg" sx={{ pt: 12, pb: 6, position: "relative", zIndex: 1, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+
+                {/* Profile Section */}
+                <Box sx={{ mb: 6 }}>
+                    <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1, duration: 0.5 }}
-                        sx={{ flex: '1 1 300px', minWidth: 300 }}
+                        transition={{ duration: 0.5 }}
+                        className="glass-panel"
+                        style={{ borderRadius: '16px', overflow: 'hidden', padding: '24px' }}
                     >
-                        <Card
-                            elevation={2}
-                            sx={{
-                                height: '100%',
-                                transition: 'transform 0.2s, box-shadow 0.2s',
-                                '&:hover': {
-                                    transform: 'translateY(-4px)',
-                                    boxShadow: 6,
-                                },
-                                borderRadius: 4,
-                            }}
-                        >
-                            <CardContent>
-                                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                                    <Stack direction="row" alignItems="center" spacing={1}>
-                                        <Avatar src={avatarUrl} sx={{ bgcolor: 'secondary.main', width: 40, height: 40 }}>
-                                            {displayName.charAt(0)}
-                                        </Avatar>
-                                        <Typography variant="h6" fontWeight={600} color="onSurface.main">
-                                            {t.dashboard.captainLog}
-                                        </Typography>
-                                    </Stack>
+                        <Stack direction={{ xs: 'column', md: 'row' }} spacing={{ xs: 2, md: 4 }} alignItems="center">
+                            {/* Profile Avatar Section */}
+                            <Box sx={{ position: 'relative', flexShrink: 0 }}>
+                                <Box
+                                    sx={{
+                                        position: 'relative',
+                                        width: { xs: 100, md: 140 },
+                                        height: { xs: 100, md: 140 },
+                                        borderRadius: '50%',
+                                        padding: '4px',
+                                        background: 'linear-gradient(45deg, #D4AF37, #F9A825)',
+                                        boxShadow: '0 0 20px rgba(212, 175, 55, 0.4)'
+                                    }}
+                                >
+                                    <Avatar
+                                        src={avatarUrl}
+                                        alt={displayName}
+                                        sx={{
+                                            width: '100%',
+                                            height: '100%',
+                                            border: '4px solid #051E3E',
+                                            bgcolor: '#051E3E'
+                                        }}
+                                    >
+                                        {displayName.charAt(0)}
+                                    </Avatar>
+                                </Box>
+                                {rankId >= 2 && (
+                                    <Box
+                                        sx={{
+                                            position: 'absolute',
+                                            bottom: 0,
+                                            right: 0,
+                                            bgcolor: '#D4AF37',
+                                            color: '#051E3E',
+                                            p: 0.5,
+                                            borderRadius: '50%',
+                                            display: 'flex',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                                            border: '2px solid #051E3E'
+                                        }}
+                                    >
+                                        <SailingIcon fontSize="small" />
+                                    </Box>
+                                )}
+                            </Box>
+
+                            {/* Profile Info Section */}
+                            <Box sx={{ flex: 1, minWidth: 0, textAlign: { xs: 'center', md: 'left' } }}>
+                                <Typography variant="overline" sx={{ color: '#D4AF37', letterSpacing: '0.2em', fontWeight: 700 }}>
+                                    {archetype || 'UNREGISTERED SOUL'}
+                                </Typography>
+                                <Typography
+                                    variant="h3"
+                                    sx={{
+                                        color: '#E0E6ED',
+                                        mb: 1,
+                                        textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                                        fontSize: { xs: '2rem', md: '3rem' },
+                                        wordBreak: 'break-word',
+                                        lineHeight: 1.2
+                                    }}
+                                >
+                                    {displayName}
+                                </Typography>
+
+                                {displayBio && (
+                                    <Typography variant="body1" sx={{ color: '#94A3B8', fontStyle: 'italic', mb: 2, maxWidth: '600px' }}>
+                                        &quot;{displayBio}&quot;
+                                    </Typography>
+                                )}
+
+                                {/* Action Buttons */}
+                                <Stack
+                                    direction="row"
+                                    spacing={2}
+                                    justifyContent={{ xs: 'center', md: 'flex-start' }}
+                                    alignItems="center"
+                                    flexWrap="wrap"
+                                    useFlexGap
+                                >
                                     <ProfileEditDialog
                                         walletAddress={address}
                                         currentUsername={displayName}
@@ -378,363 +475,235 @@ export default function DashboardPage() {
                                         currentSkills={skills}
                                         onUpdate={() => loadProfile(address)}
                                     />
-                                </Stack>
 
-                                <Divider sx={{ mb: 2, borderColor: 'outline.variant' }} />
-
-                                <Typography variant="caption" color="primary.main" sx={{ textTransform: "uppercase", fontWeight: 700, letterSpacing: 1 }}>
-                                    {t.dashboard.identity} {archetype && `• ${archetype}`}
-                                </Typography>
-                                <Typography variant="h5" fontWeight={600} sx={{ mt: 1, mb: 2, wordBreak: "break-all", color: 'onSurface.main' }}>
-                                    {displayName}
-                                </Typography>
-
-                                {displayBio ? (
-                                    <Paper
-                                        elevation={0}
-                                        sx={{
-                                            p: 2,
-                                            bgcolor: 'surface.variant',
-                                            borderRadius: 2,
-                                            borderLeft: 4,
-                                            borderColor: 'primary.main'
-                                        }}
-                                    >
-                                        <Typography
-                                            variant="body2"
-                                            color="onSurface.variant"
-                                            sx={{ fontStyle: "italic" }}
-                                        >
-                                            「{displayBio}」
-                                        </Typography>
-                                    </Paper>
-                                ) : (
-                                    <Typography variant="caption" color="text.disabled" sx={{ fontStyle: "italic", display: 'block', p: 1 }}>
-                                        {t.dashboard.noTales}
-                                    </Typography>
-                                )}
-
-                                {skills.length > 0 && (
-                                    <Box sx={{ mt: 3 }}>
-                                        <Typography variant="caption" color="text.secondary">
-                                            {t.dashboard.skills}
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
-                                            {skills.map(skill => (
-                                                <Chip key={skill} label={skill} size="small" variant="outlined" />
-                                            ))}
-                                        </Box>
-                                    </Box>
-                                )}
-
-                                {rankId === 0 && (
-                                    <Box sx={{ mt: 3, textAlign: 'center' }}>
-                                        <ButtonBase
-                                            onClick={() => router.push('/awakening')}
-                                            sx={{
-                                                p: 1.5,
-                                                width: '100%',
-                                                bgcolor: 'primary.main',
-                                                color: 'white',
-                                                borderRadius: 2,
-                                                fontWeight: 'bold',
-                                                boxShadow: 3,
-                                                transition: 'all 0.3s',
-                                                '&:hover': {
-                                                    bgcolor: 'primary.dark',
-                                                    transform: 'scale(1.02)'
-                                                }
-                                            }}
-                                        >
-                                            {t.start_awakening}
-                                        </ButtonBase>
-                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                                            {t.dashboard.awakeningCta}
-                                        </Typography>
-                                    </Box>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </Box>
-
-                    {/* Recommended Missions Card */}
-                    <Box
-                        component={motion.div}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.15, duration: 0.5 }}
-                        sx={{ flex: '1 1 300px', minWidth: 300 }}
-                    >
-                        <Card
-                            elevation={2}
-                            sx={{
-                                height: '100%',
-                                transition: 'transform 0.2s, box-shadow 0.2s',
-                                '&:hover': {
-                                    transform: 'translateY(-4px)',
-                                    boxShadow: 6,
-                                },
-                                borderRadius: 4,
-                                bgcolor: recommendedTasks.length > 0 ? "secondary.container" : "surface.main"
-                            }}
-                        >
-                            <CardContent>
-                                <Stack direction="row" alignItems="center" spacing={2} mb={2}>
-                                    <Box sx={{ p: 1, borderRadius: '50%', bgcolor: 'secondary.main', color: 'white', display: 'flex' }}>
-                                        <AssignmentIcon fontSize="small" />
-                                    </Box>
-                                    <Typography variant="h6" fontWeight={600} color="onSurface.main">
-                                        {t.dashboard.recommendedMissions}
-                                    </Typography>
-                                </Stack>
-
-                                <Divider sx={{ mb: 2, borderColor: 'outline.variant' }} />
-
-                                {recommendedTasks.length > 0 ? (
-                                    <Stack spacing={2}>
-                                        {recommendedTasks.map(task => (
-                                            <Paper
-                                                key={task.id}
-                                                component={ButtonBase}
-                                                onClick={() => router.push('/guild')}
-                                                sx={{
-                                                    p: 2,
-                                                    width: '100%',
-                                                    display: 'block',
-                                                    textAlign: 'left',
-                                                    bgcolor: 'surface.main',
-                                                    '&:hover': { bgcolor: 'action.hover' }
-                                                }}
+                                    {rankId === 0 ? (
+                                        <Tooltip title={t.dashboard.tooltips.beginVoyage} arrow>
+                                            <Button
+                                                variant="contained"
+                                                onClick={handleAwakening}
+                                                startIcon={<SailingIcon />}
+                                                sx={{ px: 4 }}
                                             >
-                                                <Typography variant="subtitle2" fontWeight={600} noWrap>
-                                                    {task.title}
+                                                Begin The Voyage
+                                            </Button>
+                                        </Tooltip>
+                                    ) : (
+                                        <Tooltip
+                                            title={nmBalance < 100 ? t.dashboard.tooltips.insufficientBalance : t.dashboard.tooltips.reAwaken}
+                                            arrow
+                                        >
+                                            <span>
+                                                <Button
+                                                    variant="outlined"
+                                                    onClick={handleAwakening}
+                                                    startIcon={<SailingIcon />}
+                                                    sx={{
+                                                        borderColor: '#D4AF37',
+                                                        color: '#D4AF37',
+                                                        '&:hover': {
+                                                            borderColor: '#F9A825',
+                                                            bgcolor: 'rgba(212, 175, 55, 0.1)'
+                                                        }
+                                                    }}
+                                                >
+                                                    Re-Awaken
+                                                </Button>
+                                            </span>
+                                        </Tooltip>
+                                    )}
+                                </Stack>
+                            </Box>
+                        </Stack>
+                    </motion.div>
+                </Box>
+
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={4} sx={{ flex: 1 }}>
+                    {/* Active Quests */}
+                    <Box sx={{ flex: 2 }}>
+                        <motion.div
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
+                            className="glass-panel"
+                            style={{ height: '100%', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+                        >
+                            <Box sx={{ p: 3, borderBottom: '1px solid rgba(212, 175, 55, 0.1)' }}>
+                                <Typography variant="h5" sx={{ fontFamily: 'var(--font-cinzel)', color: '#D4AF37', borderBottom: '1px solid #D4AF37', display: 'inline-block', pb: 1, px: 2 }}>
+                                    active quests
+                                </Typography>
+                            </Box>
+
+                            <Box sx={{ p: 0, flex: 1, overflowY: 'auto' }}>
+                                {recommendedTasks.length > 0 ? (
+                                    recommendedTasks.map(task => (
+                                        <ButtonBase
+                                            key={task.id}
+                                            sx={{
+                                                width: '100%',
+                                                textAlign: 'left',
+                                                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                                transition: 'all 0.2s',
+                                                '&:hover': { bgcolor: 'rgba(212, 175, 55, 0.05)' }
+                                            }}
+                                            onClick={handleGuildNavigate}
+                                        >
+                                            <Box sx={{ p: 3, width: '100%' }}>
+                                                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 1 }}>
+                                                    <Typography variant="h6" sx={{ color: '#E0E6ED', fontWeight: 'bold' }}>
+                                                        {task.title}
+                                                    </Typography>
+                                                    <Chip
+                                                        label={`${task.final_reward || 0} $NM`}
+                                                        size="small"
+                                                        sx={{ bgcolor: 'rgba(212, 175, 55, 0.2)', color: '#D4AF37', border: '1px solid #D4AF37' }}
+                                                    />
+                                                </Stack>
+                                                <Typography variant="body2" sx={{ color: '#94A3B8', mb: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                    {task.description}
                                                 </Typography>
-                                                <Stack direction="row" spacing={1} mt={1}>
-                                                    {task.tags?.map(tag => (
-                                                        <Chip key={tag} label={tag} size="small" sx={{ height: 20, fontSize: '0.65rem' }} />
+                                                <Stack direction="row" spacing={1}>
+                                                    {task.tags && task.tags.map((tag, idx) => (
+                                                        <Chip key={idx} label={tag} size="small" variant="outlined" sx={{ color: '#64748B', borderColor: '#334155' }} />
                                                     ))}
                                                 </Stack>
-                                            </Paper>
-                                        ))}
-                                        <ButtonBase onClick={() => router.push('/guild')}>
-                                            <Typography variant="caption" color="primary" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
-                                                View All on Guild Board &rarr;
-                                            </Typography>
+                                            </Box>
                                         </ButtonBase>
-                                    </Stack>
+                                    ))
                                 ) : (
-                                    <Box sx={{ textAlign: 'center', py: 4 }}>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {skills.length > 0
-                                                ? "No matching missions found."
-                                                : "Add skills to your profile to see recommended missions!"}
-                                        </Typography>
+                                    <Box sx={{ p: 4, textAlign: 'center', color: '#64748B' }}>
+                                        <Typography variant="body1">{t.dashboard.noTales}</Typography>
+                                        <Button
+                                            variant="text"
+                                            onClick={handleGuildNavigate}
+                                            sx={{ mt: 2, color: '#D4AF37' }}
+                                        >
+                                            {t.dashboard.guildBoard}
+                                        </Button>
                                     </Box>
                                 )}
-                            </CardContent>
-                        </Card>
+                            </Box>
+                        </motion.div>
                     </Box>
 
                     {/* Treasury Card */}
-                    <Box
-                        component={motion.div}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2, duration: 0.5 }}
-                        sx={{ flex: '1 1 300px', minWidth: 300 }}
-                    >
-                        <Card
-                            elevation={2}
-                            sx={{
-                                height: '100%',
-                                transition: 'transform 0.2s, box-shadow 0.2s',
-                                '&:hover': {
-                                    transform: 'translateY(-4px)',
-                                    boxShadow: 6,
-                                },
-                                borderRadius: 4,
-                            }}
+                    <Box sx={{ flex: 1 }}>
+                        <motion.div
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.5, delay: 0.3 }}
+                            className="glass-panel"
+                            style={{ height: '100%', borderRadius: '16px', overflow: 'hidden' }}
                         >
-                            <CardContent>
-                                <Stack direction="row" alignItems="center" spacing={2} mb={2}>
-                                    <Box sx={{ p: 1, borderRadius: '50%', bgcolor: 'secondary.main', color: 'white', display: 'flex' }}>
-                                        <WalletIcon fontSize="small" />
-                                    </Box>
-                                    <Typography variant="h6" fontWeight={600} color="onSurface.main">
-                                        {t.dashboard.treasury}
-                                    </Typography>
-                                </Stack>
-
-                                <Divider sx={{ mb: 2, borderColor: 'outline.variant' }} />
-
-                                <Typography variant="caption" color="secondary.main" sx={{ textTransform: "uppercase", fontWeight: 700, letterSpacing: 1 }}>
-                                    {t.dashboard.walletAddress}
+                            <Box sx={{ p: 3, borderBottom: '1px solid rgba(212, 175, 55, 0.1)' }}>
+                                <Typography variant="h5" sx={{ fontFamily: 'var(--font-cinzel)', color: '#D4AF37' }}>
+                                    ship&apos;s treasury
                                 </Typography>
+                            </Box>
 
-                                <Tooltip title="クリックしてコピー" placement="top" arrow>
+                            <Box sx={{ p: 3 }}>
+                                <Box sx={{ mb: 3, p: 2, bgcolor: 'rgba(5, 30, 62, 0.4)', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                                    <Typography variant="caption" sx={{ color: '#94A3B8', display: 'block', mb: 1, letterSpacing: '0.1em' }}>
+                                        LINKED WALLET
+                                    </Typography>
+                                    <Stack direction="row" alignItems="center" spacing={1} justifyContent="space-between">
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#E0E6ED' }}>
+                                            {showAddress ? address : (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Not Connected")}
+                                        </Typography>
+                                        <Stack direction="row">
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => setShowAddress(!showAddress)}
+                                                sx={{ color: '#64748B', '&:hover': { color: '#D4AF37' } }}
+                                            >
+                                                {showAddress ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                                            </IconButton>
+                                            <Tooltip title={t.dashboard.tooltips.copyAddress || "Copy Address"} arrow placement="top">
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(address);
+                                                    }}
+                                                    sx={{ color: '#64748B', '&:hover': { color: '#D4AF37' } }}
+                                                >
+                                                    <CopyIcon fontSize="small" />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </Stack>
+                                    </Stack>
+                                </Box>
+
+                                <Tooltip title="Your current in-game currency balance" arrow placement="top">
                                     <Paper
-                                        variant="outlined"
-                                        component={ButtonBase}
-                                        onClick={() => {
-                                            navigator.clipboard.writeText(address);
-                                        }}
+                                        elevation={0}
                                         sx={{
-                                            mt: 1,
+                                            p: 3,
                                             mb: 3,
-                                            p: 1.5,
-                                            width: "100%",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "space-between",
-                                            bgcolor: "surface.variant",
-                                            borderColor: "outline.variant",
-                                            borderRadius: 2,
-                                            cursor: 'pointer',
-                                            transition: 'background-color 0.2s',
-                                            '&:hover': {
-                                                bgcolor: 'action.hover',
-                                            },
-                                            textAlign: 'left'
+                                            bgcolor: 'rgba(0,0,0,0.3)',
+                                            border: '1px solid rgba(255,255,255,0.05)',
+                                            borderRadius: '12px',
+                                            textAlign: 'center'
                                         }}
                                     >
-                                        <Typography
-                                            variant="body2"
-                                            sx={{
-                                                fontFamily: "monospace",
-                                                wordBreak: "break-all",
-                                                fontSize: "0.8rem",
-                                                color: "onSurface.variant",
-                                                mr: 1
-                                            }}
-                                        >
-                                            {address}
+                                        <Typography variant="body2" sx={{ color: '#94A3B8', mb: 1, letterSpacing: '0.1em' }}>
+                                            AVAILABLE FUNDS
                                         </Typography>
-                                        <CopyIcon fontSize="small" sx={{ color: 'secondary.main', opacity: 0.7 }} />
+                                        <Typography variant="h2" sx={{ color: '#D4AF37', fontFamily: 'var(--font-cinzel)', textShadow: '0 0 20px rgba(212, 175, 55, 0.3)' }}>
+                                            {nmBalance.toLocaleString()}
+                                            <Typography component="span" variant="h5" sx={{ ml: 1, opacity: 0.7 }}>$NM</Typography>
+                                        </Typography>
                                     </Paper>
                                 </Tooltip>
 
-                                <Typography variant="caption" color="secondary.main" sx={{ textTransform: "uppercase", fontWeight: 700, letterSpacing: 1 }}>
-                                    {t.dashboard.balance}
-                                </Typography>
-                                <Typography variant="h3" fontWeight={700} sx={{ mt: 1, color: 'onSurface.main' }}>
-                                    {knotBalance}
-                                    <Typography component="span" variant="h6" color="text.secondary" sx={{ ml: 1 }}>
-                                        $KNOT
-                                    </Typography>
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                                    Native: {Number(balance).toFixed(4)} POL
-                                </Typography>
-                            </CardContent>
-                        </Card>
-                    </Box>
-
-                    {/* Crew Status Card */}
-                    <Box
-                        component={motion.div}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3, duration: 0.5 }}
-                        sx={{ flex: '1 1 300px', minWidth: 300 }}
-                    >
-                        <Card
-                            elevation={2}
-                            sx={{
-                                height: '100%',
-                                bgcolor: rankId > 0 ? `${getRankColor()}15` : "surface.main",
-                                position: "relative",
-                                overflow: "hidden",
-                                borderRadius: 4,
-                                transition: 'transform 0.2s, box-shadow 0.2s',
-                                '&:hover': {
-                                    transform: 'translateY(-4px)',
-                                    boxShadow: 6,
-                                },
-                            }}
-                        >
-                            {rankId > 0 && (
-                                <Box
-                                    component={motion.div}
-                                    animate={{ rotate: [10, 15, 10] }}
-                                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                                    sx={{
-                                        position: "absolute",
-                                        top: -20,
-                                        right: -20,
-                                        opacity: 0.15,
-                                        color: getRankColor(),
-                                        pointerEvents: 'none'
-                                    }}
-                                >
-                                    <SailingIcon sx={{ fontSize: 180 }} />
-                                </Box>
-                            )}
-
-                            <CardContent sx={{ position: "relative", zIndex: 1 }}>
-                                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                                    <Stack direction="row" alignItems="center" spacing={2}>
-                                        <Box sx={{ p: 1, borderRadius: '50%', bgcolor: getRankColor(), color: 'white', display: 'flex' }}>
-                                            <SailingIcon fontSize="small" />
-                                        </Box>
-                                        <Typography variant="h6" fontWeight={600} color="onSurface.main">
-                                            {t.dashboard.crewStatus}
+                                <Stack spacing={2}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            <WalletIcon sx={{ color: '#64748B' }} />
+                                            <Typography variant="body2" sx={{ color: '#E0E6ED' }}>Polygon</Typography>
+                                        </Stack>
+                                        <Typography variant="body2" sx={{ color: '#94A3B8', fontFamily: 'monospace' }}>
+                                            {Number(balance).toFixed(4)} POL
                                         </Typography>
-                                    </Stack>
-                                    <Chip
-                                        label={`Rank ${rankId}`}
-                                        sx={{
-                                            fontWeight: 700,
-                                            bgcolor: 'surface.main',
-                                            color: getRankColor(),
-                                            borderColor: getRankColor(),
-                                            border: 1
-                                        }}
-                                    />
+                                    </Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            <AssignmentIcon sx={{ color: '#64748B' }} />
+                                            <Typography variant="body2" sx={{ color: '#E0E6ED' }}>Rank</Typography>
+                                        </Stack>
+                                        <Chip
+                                            label={getRankName()}
+                                            size="small"
+                                            sx={{
+                                                bgcolor: `${getRankColor()}20`,
+                                                color: getRankColor(),
+                                                border: `1px solid ${getRankColor()}`,
+                                                fontWeight: 'bold'
+                                            }}
+                                        />
+                                    </Box>
                                 </Stack>
-
-                                <Divider sx={{ mb: 2, borderColor: `${getRankColor()}40` }} />
-
-                                <Typography variant="caption" sx={{ textTransform: "uppercase", fontWeight: 700, letterSpacing: 1, color: getRankColor() }}>
-                                    {t.dashboard.currentRank}
-                                </Typography>
-                                <Typography
-                                    variant="h3"
-                                    fontWeight={800}
-                                    sx={{
-                                        mt: 1,
-                                        mb: 3,
-                                        color: getRankColor(),
-                                        letterSpacing: "0.05em",
-                                        textShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                                    }}
-                                >
-                                    {getRankName()}
-                                </Typography>
-
-                                {/* Rank Progress */}
-                                <Box sx={{ position: 'relative', height: 8, bgcolor: 'surface.variant', borderRadius: 4, overflow: 'hidden' }}>
-                                    <Box
-                                        component={motion.div}
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${(rankId / 3) * 100}%` }}
-                                        transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
-                                        sx={{
-                                            height: '100%',
-                                            bgcolor: getRankColor(),
-                                            borderRadius: 4,
-                                        }}
-                                    />
-                                </Box>
-
-                                <Typography variant="body2" color="onSurface.variant" sx={{ mt: 3, fontStyle: "italic", lineHeight: 1.6 }}>
-                                    {rankId === 0 && t.ranks.guestDesc}
-                                    {rankId > 0 && t.ranks.memberDesc}
-                                </Typography>
-                            </CardContent>
-                        </Card>
+                            </Box>
+                        </motion.div>
                     </Box>
-                </Box>
+                </Stack>
             </Container>
+
+            <Snackbar
+                open={openError}
+                autoHideDuration={6000}
+                onClose={() => setOpenError(false)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={() => setOpenError(false)} severity="error" sx={{ width: '100%', bgcolor: '#330000', color: '#ffcccc', border: '1px solid #ff0000' }}>
+                    {errorMessage}
+                </Alert>
+            </Snackbar>
+
+            {showOnboarding && (
+                <OnboardingOverlay
+                    walletAddress={address}
+                    onComplete={() => setShowOnboarding(false)}
+                />
+            )}
         </Box>
     );
 }

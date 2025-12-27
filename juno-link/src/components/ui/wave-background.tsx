@@ -2,40 +2,40 @@
 
 export function WaveBackground() {
     return (
-        <div className="fixed inset-0 -z-10 overflow-hidden bg-[#Fdfbf7] pointer-events-none">
+        <div className="fixed inset-0 -z-10 overflow-hidden bg-[#020C1B] pointer-events-none">
             {/* Gradient Overlay for Ocean Depth - Cleaner blend */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[#fdfbf7] via-[#e6e2d3] to-[#d2b48c]/20 z-[0]" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0F2D54] via-[#051E3E] to-[#020C1B] z-[0]" />
 
             {/* Waves Container */}
             <div className="absolute bottom-0 left-0 w-full h-[50vh]">
 
                 {/* Wave 1 (Back) - Slow, Deep, Smooth */}
-                <div className="absolute bottom-0 flex w-[200%] h-full opacity-40 animate-wave-slow">
+                <div className="absolute bottom-0 flex w-[200%] h-full opacity-30 animate-wave-slow">
                     <WaveSVG
-                        color1="#000080"
-                        color2="#000040"
+                        color1="#0A2344"
+                        color2="#051E3E"
                         path="M0,192 C320,320 640,64 960,192 C1280,320 1440,256 1440,256 V320 H0 Z"
                         index={0}
                     />
                     <WaveSVG
-                        color1="#000080"
-                        color2="#000040"
+                        color1="#0A2344"
+                        color2="#051E3E"
                         path="M0,192 C320,320 640,64 960,192 C1280,320 1440,256 1440,256 V320 H0 Z"
                         index={1}
                     />
                 </div>
 
-                {/* Wave 2 (Front) - Faster, Lighter, Elegant */}
-                <div className="absolute bottom-[-10px] flex w-[200%] h-full opacity-30 animate-wave-medium delay-1000">
+                {/* Wave 2 (Front) - Faster, Lighter for contrast */}
+                <div className="absolute bottom-[-10px] flex w-[200%] h-full opacity-20 animate-wave-medium delay-1000">
                     <WaveSVG
-                        color1="#4169E1"
-                        color2="#000080"
+                        color1="#164E87"
+                        color2="#0A2344"
                         path="M0,256 C360,128 720,356 1080,224 C1260,160 1440,256 1440,256 V320 H0 Z"
                         index={2}
                     />
                     <WaveSVG
-                        color1="#4169E1"
-                        color2="#000080"
+                        color1="#164E87"
+                        color2="#0A2344"
                         path="M0,256 C360,128 720,356 1080,224 C1260,160 1440,256 1440,256 V320 H0 Z"
                         index={3}
                     />

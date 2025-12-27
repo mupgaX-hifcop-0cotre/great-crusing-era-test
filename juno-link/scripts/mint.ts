@@ -1,6 +1,7 @@
+/// <reference types="@nomicfoundation/hardhat-toolbox" />
 import hre from "hardhat";
 
-const { ethers } = hre;
+const { ethers } = hre as any;
 
 async function main() {
     // 1. Get the Deployer Account (has MINTER_ROLE)

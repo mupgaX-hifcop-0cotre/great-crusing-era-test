@@ -7,7 +7,6 @@ import { useEffect } from "react";
 import { WaveBackground } from "@/components/ui/wave-background";
 import { Box, Card, CardContent, Typography, Button, Container, Stack } from "@mui/material";
 import AnchorIcon from "@mui/icons-material/Anchor";
-import SailingIcon from "@mui/icons-material/Sailing";
 import LanguageIcon from "@mui/icons-material/Language";
 
 export default function Home() {
@@ -69,16 +68,28 @@ export default function Home() {
               {/* Logo Icon with M3 styling */}
               <Box
                 sx={{
-                  bgcolor: 'primary.main',
+                  bgcolor: 'white',
                   borderRadius: '50%',
-                  p: 3,
+                  p: 1,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   boxShadow: '0px 4px 8px 3px rgba(0, 0, 0, 0.15)',
+                  width: 120,
+                  height: 120,
+                  overflow: 'hidden'
                 }}
               >
-                <SailingIcon sx={{ fontSize: 56, color: 'white' }} />
+                <Box
+                  component="img"
+                  src="/assets/logo.jpg"
+                  alt="Great Cruising Era DAO"
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                />
               </Box>
 
               {/* Title with M3 Typography */}
