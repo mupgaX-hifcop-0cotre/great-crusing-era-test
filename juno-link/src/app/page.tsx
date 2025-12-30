@@ -3,22 +3,54 @@
 import { useAuth } from "@/components/providers/auth-provider";
 import { useLanguage } from "@/components/providers/language-provider";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { WaveBackground } from "@/components/ui/wave-background";
-import { Box, Card, CardContent, Typography, Button, Container, Stack } from "@mui/material";
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  Container,
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Snackbar,
+} from "@mui/material";
 import AnchorIcon from "@mui/icons-material/Anchor";
 import LanguageIcon from "@mui/icons-material/Language";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
 export default function Home() {
   const { loggedIn, login, isInitialized, error } = useAuth();
   const { t, toggleLanguage, language } = useLanguage();
   const router = useRouter();
+  const [isInAppBrowser, setIsInAppBrowser] = useState(false);
+  const [showCopySnackbar, setShowCopySnackbar] = useState(false);
 
   useEffect(() => {
     if (loggedIn) {
       router.push("/dashboard");
     }
+
+    // Detect Android in-app browsers
+    const ua = typeof window !== "undefined" ? window.navigator.userAgent.toLowerCase() : "";
+    const isAndroid = /android/i.test(ua);
+    const isRestricted = /line|slack|discord|version\/4\.0|wv|fban|fbav|instagram/i.test(ua);
+
+    if (isAndroid && isRestricted) {
+      setIsInAppBrowser(true);
+    }
   }, [loggedIn, router]);
+
+  const handleCopyUrl = () => {
+    if (typeof window !== "undefined") {
+      navigator.clipboard.writeText(window.location.href);
+      setShowCopySnackbar(true);
+    }
+  };
 
   return (
     <Box
@@ -169,6 +201,52 @@ export default function Home() {
           </CardContent>
         </Card>
       </Container>
+
+      {/* In-App Browser Warning Dialog */}
+      <Dialog
+        open={isInAppBrowser}
+        onClose={() => setIsInAppBrowser(false)}
+        PaperProps={{
+          sx: { borderRadius: 4, p: 1 }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 500 }}>
+          {t.login.inAppBrowserModal.title}
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" color="text.secondary">
+            {t.login.inAppBrowserModal.description}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, justifyContent: 'center', gap: 2 }}>
+          <Button
+            variant="contained"
+            startIcon={<ContentCopyIcon />}
+            onClick={handleCopyUrl}
+            sx={{ borderRadius: 100, px: 4 }}
+          >
+            {t.login.inAppBrowserModal.copyButton}
+          </Button>
+          <Button
+            onClick={() => setIsInAppBrowser(false)}
+            sx={{ borderRadius: 100 }}
+          >
+            {t.common.finish || 'Close'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Copy Success Snackbar */}
+      <Snackbar
+        open={showCopySnackbar}
+        autoHideDuration={3000}
+        onClose={() => setShowCopySnackbar(false)}
+        message={t.login.inAppBrowserModal.copySuccess}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        ContentProps={{
+          sx: { borderRadius: 2 }
+        }}
+      />
     </Box>
   );
 }
