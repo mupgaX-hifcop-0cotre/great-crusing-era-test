@@ -23,6 +23,12 @@ const lato = Lato({
 export const metadata: Metadata = {
   title: "JUNO LINK",
   description: "Navigate the era of discovery with Juno Link.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "JUNO LINK",
+  },
 };
 
 export default function RootLayout({
