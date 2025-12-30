@@ -78,6 +78,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 const authAdapter = new AuthAdapter({
                     adapterSettings: {
                         uxMode: UX_MODE.REDIRECT,
+                        redirectUrl: typeof window !== "undefined" ? window.location.origin : undefined,
                     },
                     privateKeyProvider,
                 });
