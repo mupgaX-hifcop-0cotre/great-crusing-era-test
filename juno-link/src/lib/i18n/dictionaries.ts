@@ -4,6 +4,13 @@ export const ja = {
         subtitle: 'Web3時代の新しい船出',
         button: '乗船する',
         footer: 'Web3Authによる安全な認証',
+        inAppBrowserWarning: 'Androidのアプリ内ブラウザ（LINE/Slack等）ではGoogleログインがブロックされる場合があります。ログインできない場合は、右上のメニューから「標準のブラウザで開く」を選択してください。',
+        inAppBrowserModal: {
+            title: 'システムブラウザで開いてください',
+            description: '現在お使いのアプリ内ブラウザ（LINE/Slack等）では、Googleログインが制限されています。正常にログインするには、Chromeなどの標準ブラウザでこのページを開き直してください。',
+            copyButton: 'URLをコピー',
+            copySuccess: 'コピーしました',
+        }
     },
     loading: '読み込み中...',
     error: 'エラーが発生しました',
@@ -245,6 +252,13 @@ export const en = {
         subtitle: 'Embark on the Great Cruising Era',
         button: 'Board the Ship',
         footer: 'Secure authentication by Web3Auth',
+        inAppBrowserWarning: 'Google login may be blocked in Android in-app browsers (LINE, Slack, etc.). If you cannot login, please select "Open in System Browser" from the menu.',
+        inAppBrowserModal: {
+            title: 'Please open in System Browser',
+            description: 'Google login is often blocked in Android in-app browsers (LINE, Slack, etc.). To login successfully, please reopen this page in a standard browser like Chrome.',
+            copyButton: 'Copy URL',
+            copySuccess: 'URL Copied',
+        }
     },
     loading: 'Loading...',
     error: 'An error occurred',
